@@ -1,0 +1,37 @@
+{
+  "name": "langine",
+  "version": "1.0.0",
+  "description": "Language Engine for Creating, Hosting and Playing Games",
+  "main": "index.js",
+  "scripts": {
+    "tests-compile": "tsc --project tsconfig.json",
+    "tests-reporter": "nyc --reporter=html mocha --reporter mocha-html-reporter --exit ./dist/games/**/test/*.spec.js",
+    "tests-active": "mocha ./src/games/**/*.spec.ts",
+    "tests-run": "npm run tests-compile && npm run tests-reporter",
+    "tests-background": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonaspmeise/langine.git"
+  },
+  "keywords": [
+    "game",
+    "engine",
+    "nlp"
+  ],
+  "author": "Jonas Philipp Meise",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jonaspmeise/langine/issues"
+  },
+  "homepage": "https://github.com/jonaspmeise/langine#readme",
+  "devDependencies": {
+    "mocha": "^10.2.0",
+    "mocha-html-reporter": "^0.0.1",
+    "nodemon": "^3.0.1",
+    "nyc": "^15.1.0",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
