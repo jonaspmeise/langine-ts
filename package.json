@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "tests-compile": "tsc --project tsconfig.json",
-    "tests-reporter": "nyc --reporter=html mocha --reporter mocha-html-reporter --exit ./dist/games/**/test/*.spec.js",
-    "tests-active": "mocha ./src/games/**/*.spec.ts",
+    "tests-reporter": "nyc --reporter=html mocha --exit ./dist/tests/*.js",
     "tests-run": "npm run tests-compile && npm run tests-reporter",
     "tests-background": "nodemon"
   },
@@ -26,6 +25,9 @@
   },
   "homepage": "https://github.com/jonaspmeise/langine#readme",
   "devDependencies": {
+    "@types/chai": "^4.3.9",
+    "@types/mocha": "^10.0.3",
+    "chai": "^4.3.10",
     "mocha": "^10.2.0",
     "mocha-html-reporter": "^0.0.1",
     "nodemon": "^3.0.1",
