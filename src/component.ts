@@ -1,5 +1,10 @@
-import { ComponentFields } from "./component-fields";
+import { Dynamic } from "./Dynamic";
+import { PlainObject } from "./Types";
 
-export class Component {
-    constructor(private values: ComponentFields) {}
+export class Component extends Dynamic {
+    constructor(values: PlainObject = {}) {
+        super();
+
+        Object.assign(this, values);
+    }
 }

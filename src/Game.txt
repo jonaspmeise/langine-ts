@@ -1,0 +1,184 @@
+
+    public getInheritedComponents(component: string | Component): Component[] {
+        if(typeof component !== 'string') component = component[idSymbol];
+
+        let allComponents = [this.components.get(component)!];
+
+        this.componentInheritance.get(component)?.forEach((otherComponent) => {
+            allComponents = allComponents.concat(this.getInheritedComponents(otherComponent));
+        });
+
+        return allComponents;
+    };
+
+    registerState = (state: string) => {
+        throw new Error("Method not implemented.");
+    };
+
+    do = (player: Player, action: Action): Game => {
+        //TODO: Implement this!
+        return this;
+    };
+
+    registerComponents = (name: string, 
+        values?: {
+            [key: string]: ((...args: unknown[]) => boolean) | unknown
+        }, 
+        inheritFrom: string | string[] = []): Component => {
+
+        if(typeof inheritFrom == 'string') inheritFrom = [inheritFrom];
+        if(inheritFrom?.map((parent) => this.components.has(parent)).includes(false)) throw new InvalidComponentException(`The Component "${name}" has a parent definition for which a Component doesn't exist: ${inheritFrom}. Please check the Component definitions and names!`);
+
+        this.componentInheritance.set(name, [...inheritFrom ?? []]);
+        const component = new Component(name, inheritFrom, Object.assign(this.fetchAllValues(name), values));
+
+        this.components.set(name, component);
+        this.referenceMap.set(component, []);
+        return component;
+    };
+
+    private fetchAllValues = (componentName: string): {[key: string]: unknown} => {
+        let component = this.components.get(componentName);
+
+        let values = component ?? {};
+
+        this.componentInheritance.get(componentName)?.forEach((otherComponent) => {
+            values = Object.assign(values, this.fetchAllValues(otherComponent));
+        });
+
+        return values;
+    };
+
+    registerAction = (name: string, action: Action) => {
+        throw new Error("Method not implemented.");
+    };
+
+    registerGuard = (actionName: string, check: (...args: any[]) => boolean, denyMessage: string | ((...args: any[]) => string)) => {
+
+    };
+
+    start = () => {
+        if(this.states.length == 0) throw new MissingSetupException('The Game needs atleast one State!');
+    };
+
+    spawnEntities = (components: string[] | Identifiable[], initialValues: {[key: string]: any} = {}, name?: string): Entity => {
+        if(components.length == 0) throw new MissingSetupException(`The entity ${name === undefined ? '' : `"${name}"`} needs atleast one Component when being spawned!`);
+        if(isReferredArray(components)) components = components.map((component) => component[idSymbol]);
+
+        const referencedComponents = components.map((component) => this.components.get(component));
+        if(referencedComponents.includes(undefined)) throw new InvalidComponentException(`The component ${components.find((component) => !this.components.has(component))} does not exist! Please define it first.`); 
+        
+        let trueComponents = referencedComponents as Component[];
+
+        const mandatoryValues = trueComponents
+            .reduce((acc, current) => {
+                Object.entries(current).forEach(([key, value]) => {
+                    if(value === undefined) acc[key] = undefined;
+                });
+                return acc;
+            }, 
+        {});
+
+        const values = {...mandatoryValues, ...initialValues};
+
+        if(Object.values(values).includes(undefined)) throw new MissingSetupException(`The attribute "${Object.entries(values).filter(([key, value]) => value == undefined).map(([key, _]) => key)}" on the object ${name} is missing a mandatory initial value!`);
+
+        //get standard values
+        const standardValues = trueComponents
+            .reduce((acc, current) => Object.assign(acc, current), {});
+
+        const entity = new Entity(this, trueComponents, name, {...standardValues, ...initialValues});
+
+        this.entities.push(entity);
+        entity[componentsSymbol].forEach((component) => {
+            let existingEntities = this.referenceMap.get(component) ?? [];
+
+            this.referenceMap.set(component, [...existingEntities, entity]);
+        });
+
+        return entity;
+    };
+
+    query(filter: string | string[] | ((...args: any[]) => boolean), returnCartesianCombinations?: false): Entity[];
+    query(filter: string | string[] | ((...args: any[]) => boolean), returnCartesianCombinations: true): Entity[][];
+    query(filter: string | string[] | ((...args: any[]) => boolean), returnCartesianCombinations: boolean = false): Entity[] | Entity[][] {
+        if(typeof filter === 'string') filter = [filter];
+
+        //search for intersection of multiple types (filter-function is identity)
+        if(Array.isArray(filter)) {
+            const components = filter.map((componentName) => this.components.get(componentName));
+
+            if(components.includes(undefined)) throw new InvalidQueryException(`The argument "${filter}" does not reference a valid Component. Does that Component exist?`);
+
+            const allEntites: Set<Entity> = new Set(
+                    (components as Component[])
+                    .map((component) => this.referenceMap.get(component)!)
+                    .reduce((arr, current) => arr.concat(current))
+                );
+
+            return [...allEntites].filter((entity) => (components as Component[]).every((component) => {
+                return entity[componentsSymbol].has(component);
+            }));        
+        }
+
+        //figure out which components to query
+        const args = (filter.toString().split('=>')[0]).match(/[a-z0-9_]+/gi)!;
+
+        if(args == null) throw new InvalidQueryException(`The query function "${filter}" has no parameters. Consider adding some; Against which Components should be queried?`);
+
+        const componentsToQuery = args.map((arg) => this.components.get(arg));
+        if(componentsToQuery.includes(undefined)) throw new InvalidQueryException(`The argument "${args[componentsToQuery.indexOf(undefined)]}" does not reference a valid Component. Does that Component exist?`);
+
+        if(returnCartesianCombinations) {
+            //build combination of all entities that are relevant
+            let entitiesToQuery = (componentsToQuery as Component[]).map((component) => this.referenceMap.get(component)!);
+            entitiesToQuery = cartesianProduct(entitiesToQuery);
+
+            return entitiesToQuery.filter((singleQuery) => (filter as Function)(...singleQuery));
+        }
+
+        return (componentsToQuery as Component[])
+            .map((component) => this.referenceMap.get(component)!)
+            .reduce((prev, next) => prev.concat(next))
+            .filter((entity) => componentsToQuery.every((component) => entity[componentsSymbol].has(component!)))
+            .filter((entity) => (filter as Function)(entity));
+    };
+
+    addComponentToEntity = (entity: Entity | string, component: Component | string, values: {[key: string]: unknown} = {}): Entity => {
+        if(typeof entity == 'string') {
+            const entityRef = this.entityMap.get(entity);
+
+            if(entityRef === undefined) throw new MissingSetupException(`The Entity "${entity}" does not exist! Did you already spawn an Entity with that name?`);
+            entity = entityRef;
+        }
+
+        if(typeof component == 'string') {
+            const componentRef = this.components.get(component);
+
+            if(componentRef === undefined) throw new MissingSetupException(`The Component "${component}" does not exist! Did you already define a Component with that name?`);
+            component = componentRef;
+        }
+
+        entity[componentsSymbol].add(component);
+
+        //fetch inherited components, too.
+        const inheritedComponents = [...entity[componentsSymbol]]
+            .map((component) => this.getInheritedComponents(component))
+            .reduce((acc, current) => acc.concat(...current));
+
+        //check whether all required values are set
+        new Set(inheritedComponents).forEach((component) => {
+            const valuesToFill = {...component, ...values};
+
+            if(Object.values(valuesToFill).includes(undefined)) throw new MissingSetupException(`The attribute "${Object.entries(valuesToFill).filter(([key, value]) => value == undefined).map(([key, _]) => key)}" on the object ${this[idSymbol]} is missing a mandatory initial value!`);
+    
+            Object.assign(entity, component); //standard values from the component
+            entity[componentsSymbol].add(component);
+        });
+
+        this.referenceMap.set(component, [...this.referenceMap.get(component)!, entity]);
+
+        Object.assign(entity, values); //special initialized values
+
+        return entity;
+    }
