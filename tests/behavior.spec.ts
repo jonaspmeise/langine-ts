@@ -48,7 +48,7 @@ describe('Behavior tests.', () => {
         it('Registering a Component with a non-existing Parent (by object) throws an Error.', () => {
             const fakeComponent = new Component();
 
-            expect(() => game.registerComponent('test-child', {values: {z: 1}, parents: [fakeComponent]})).to.throw(MissingSetupException);
+            expect(() => game.registerComponent('test-child', {values: {z: 1}, parents: [fakeComponent]})).to.throw(InvalidComponentException);
         });
 
         it('A child\'s values take precedence over the inherited values from its parent.', () => {
@@ -88,7 +88,7 @@ describe('Behavior tests.', () => {
         });
 
         it('Spawning an Entity with an invalid Component (by object) throws an Error.', () => {
-            expect(() => game.spawnEntity([new Component()])).to.throw(MissingSetupException);
+            expect(() => game.spawnEntity([new Component()])).to.throw(InvalidEntityException);
         });
 
         it('Spawning an Entity without passing required values of an Object throws an Error.', () => {

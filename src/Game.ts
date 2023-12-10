@@ -42,7 +42,7 @@ export class Game implements GameAccessor {
                 return component;
             }
 
-            if(!this.idByComponent.has(parentComponent)) throw new MissingSetupException(`The Component "${JSON.stringify(parentComponent)}" is not registered. Did you already register it?`);     
+            if(!this.idByComponent.has(parentComponent)) throw new InvalidComponentException(`The Component "${JSON.stringify(parentComponent)}" is not registered. Did you already register it?`);     
             return parentComponent;
         });
 
@@ -78,7 +78,7 @@ export class Game implements GameAccessor {
                 return component;
             }
 
-            if(!this.idByComponent.has(baseComponent)) throw new MissingSetupException(`The Component "${JSON.stringify(baseComponent)}" is not registered. Did you already register it?`);     
+            if(!this.idByComponent.has(baseComponent)) throw new InvalidEntityException(`The Component "${JSON.stringify(baseComponent)}" is not registered. Did you already register it?`);     
             return baseComponent;
         });
 
@@ -99,7 +99,7 @@ export class Game implements GameAccessor {
             .map((component) => this.idByComponent.get(component)!)
             .forEach((id) => {
                 if(!this.entitiesByComponent.has(id)) this.entitiesByComponent.set(id, new Set());
-                
+
                 this.entitiesByComponent.set(id, this.entitiesByComponent.get(id)!.add(name))
             });
 
