@@ -1,8 +1,8 @@
-export function isReferenceArray(value: unknown[]): value is string[] {
+export const isReferenceArray = (value: unknown[]): value is string[] => {
     return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
+};
 
-export function cartesianProduct<T>(arrays: T[][]): T[][] {
+export const cartesianProduct = <T>(arrays: T[][]): T[][] => {
     if (!arrays || arrays.length === 0) {
       return [[]];
     }
@@ -25,7 +25,27 @@ export function cartesianProduct<T>(arrays: T[][]): T[][] {
     generateCombinations(0, []);
   
     return result;
-}
+};
+
+export const intersection = <T> (...sets: Set<T>[]): Set<T> => {
+    if (sets.length === 0) {
+        return new Set();
+    }
+
+    const result = new Set(sets[0]);
+  
+    result.forEach((value) => {
+        sets.forEach((otherSet) => {
+            if(!otherSet.has(value)) result.delete(value);
+
+            return;
+        });
+
+        if(result.size == 0) return;
+    });
+  
+    return result;
+  };
 
 export const createPlainObject = (originalObject: { [key: string]: any }): { [key: string]: any } => {
     if (!originalObject.hasOwnProperty('id')) {

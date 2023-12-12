@@ -1,42 +1,41 @@
 import { Action } from "./Action";
 import { Component } from "./Component";
 import { Entity } from "./Entity";
-import { Game } from "./Game";
 import { Guard } from "./Guard";
 import { Player } from "./Player";
 import { State } from "./State";
-import { PlainObject } from "./Types";
+import { ID, PlainObject } from "./Types";
 
 export interface GameAccessor {
-    addComponentToEntity(entity: Entity | string, component: Component | string, values?: PlainObject): Entity;
+    addComponentToEntity(entity: Entity | ID, component: Component | ID, values?: PlainObject): Entity;
 
-    registerComponent(name: string, optional?: {
-        parents?: (Component | string)[],
+    registerComponent(name: ID, optional?: {
+        parents?: (Component | ID)[],
         values?: PlainObject
     }): Component;
-    spawnEntity(components: (Component | string)[], optional?: {
-        name?: string,
+    spawnEntity(components: (Component | ID)[], optional?: {
+        name?: ID,
         values?: PlainObject
     }): Entity;
 
-    findComponentById(name: string): Component;
-    findEntityById(name: string): Entity;
-    findEntitiesByComponent(component: (Component | string) | (Component | string)[]): Entity[];
+    findComponentById(name: ID): Component;
+    findEntityById(name: ID): Entity;
 
-    findEntitiesByFilter(filter: (...args: any[]) => boolean): Entity[];
-    findEntitiesByFilter(filter: (...args: any[]) => boolean, enableCartesianCombinations: false): Entity[];
-    findEntitiesByFilter(filter: (...args: any[]) => boolean, enableCartesianCombinations: true): Entity[][];
+    queryEntities(filter: (Component | ID) | (Component | ID)[] | ((...args: any[]) => boolean)): Set<Entity>;
+    queryEntities(filter: (Component | ID) | (Component | ID)[] | ((...args: any[]) => boolean), returnCombinations: false): Set<Entity>;
+    queryEntities(filter: (Component | ID) | (Component | ID)[] | ((...args: any[]) => boolean), returnCombinations: true): Set<Entity[]>;
 
-    registerState(name: string): State;
+    registerState(name: ID): State;
     registerAction(
-            name: string, 
+            name: ID, 
             language: string | ((...words: Entity[]) => string), //can also be type Game
             event: (...args: Entity[]) => void //? o_Ô
         ): Action;
     registerGuard(
-        action: Action | string, 
+        action: Action | ID, 
         check: (...args: Entity[]) => boolean, 
-        message?: string | ((...args: Entity[]) => string)
+        message?: string | ((...args: Entity[]) => string),
+        name?: ID
     ): Guard;
 
     start(): void;
