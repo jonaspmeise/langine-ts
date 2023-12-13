@@ -6,6 +6,8 @@ import { NonExistingException } from "../src/NonExistingException";
 import { MissingSetupException } from "../src/MissingSetupException";
 import { Component } from "../src/Component";
 import { InvalidEntityException } from "../src/InvalidEntityException";
+import { InvalidActionException } from "../src/InvalidActionException";
+import { Entity } from "../src/Entity";
 
 describe('Behavior tests.', () => {
     let game: Game;
@@ -42,7 +44,7 @@ describe('Behavior tests.', () => {
         });
 
         it('Registering a Component with a non-existing Parent (by reference) throws an Error.', () => {
-            expect(() => game.registerComponent('test-child', {values: {z: 1}, parents: ['non-existing parent']})).to.throw(MissingSetupException);
+            expect(() => game.registerComponent('test-child', {values: {z: 1}, parents: ['non-existing parent']})).to.throw(NonExistingException);
         });
 
         it('Registering a Component with a non-existing Parent (by object) throws an Error.', () => {
@@ -126,7 +128,7 @@ describe('Behavior tests.', () => {
         });
     });
 
-    describe('Modifying Entity.', () => {
+    describe('Modifying Entities.', () => {
         it('Modifying the Entity (result) of a Filter also modifies the true object.', () => {
             game.registerComponent('nameable', {values: {name: undefined}});
             game.spawnEntity(['nameable'], {values: {name: 'Peter'}});
@@ -137,8 +139,8 @@ describe('Behavior tests.', () => {
             expect(entities).to.have.length(2);
             entities.forEach((entity) => entity.name += ' Jackson');
 
-            expect(game.queryEntities('nameable')).to.include({name: 'Peter Jackson'});
-            expect(game.queryEntities('nameable')).to.include({name: 'Jack Jackson'});
+            expect(game.queryEntities('nameable')).to.deep.include({name: 'Peter Jackson'});
+            expect(game.queryEntities('nameable')).to.deep.include({name: 'Jack Jackson'});
         });
 
         it('Modifying a Entity\'s Components changes its values (and all variables that are a reference to that value), too.', () => {
@@ -146,10 +148,11 @@ describe('Behavior tests.', () => {
             game.registerComponent('ageable', {values: {age: 10}});
 
             game.spawnEntity(['nameable'], {values: {name: 'Peter'}});
-            const entity = game.queryEntities('nameable')[0];
+            const entity = [...game.queryEntities('nameable')][0];
 
             game.addComponentToEntity(entity, 'ageable');
 
+            expect(entity.name).to.equal('Peter');
             expect(entity.age).to.equal(10);
         });
 
@@ -157,8 +160,7 @@ describe('Behavior tests.', () => {
             game.registerComponent('nameable', {values: {name: undefined}});
             game.registerComponent('ageable', {values: {age: 10}});
 
-            game.spawnEntity(['ageable']);
-            const entity = game.queryEntities('ageable')[0];
+            const entity = game.spawnEntity(['ageable']);
 
             expect(() => game.addComponentToEntity(entity, 'nameable')).to.throw(MissingSetupException);
         });
@@ -167,7 +169,7 @@ describe('Behavior tests.', () => {
             game.registerComponent('ageable', {values: {age: 10}});
 
             game.spawnEntity(['ageable']);
-            const entity = game.queryEntities('ageable')[0];
+            const entity = [...game.queryEntities('ageable')][0];
 
             expect(() => game.addComponentToEntity(entity, 'non-existing component')).to.throw(InvalidComponentException);
         });
@@ -176,10 +178,20 @@ describe('Behavior tests.', () => {
             game.registerComponent('ageable', {values: {age: 10}});
 
             game.spawnEntity(['ageable']);
-            const entity = game.queryEntities('ageable')[0];
+            const entity = [...game.queryEntities('ageable')][0];
 
             expect(() => game.addComponentToEntity('non-existing-entity-id', 'ageable')).to.throw(InvalidEntityException);
         });
+
+        it('Modifying an spawned Entity modifies it inside the Engine, too.', () => {
+            game.registerComponent('ageable', {values: {age: 10}});
+
+            const entity = game.spawnEntity(['ageable']);
+            entity.age = 100;
+
+            expect(game.queryEntities((ageable) => ageable.age == 100)).to.have.length(1);
+            expect(game.queryEntities((ageable) => ageable.age != 100)).to.have.length(0);
+        })
 
         //Removing Components from Entities
     });
@@ -197,7 +209,7 @@ describe('Behavior tests.', () => {
         });
 
         it('Spawning an Entity with an invalid Component (by reference) throws an Error.', () => {
-            expect(() => game.spawnEntity(['something'])).to.throw(MissingSetupException);
+            expect(() => game.spawnEntity(['something'])).to.throw(NonExistingException);
         });
 
         it('Spawning an Entity with an invalid Component (by object) throws an Error.', () => {
@@ -237,5 +249,96 @@ describe('Behavior tests.', () => {
 
             expect(() => game.spawnEntity(['nameable'], {values: {age: 120}})).to.throw(InvalidEntityException);
         });
+    });
+
+    describe('Actions & Guards.', () => {
+        const playerA = new Player('Player A');
+        const playerB = new Player('Player B');
+        let redDice: Entity;
+        let blueDice: Entity;
+
+        beforeEach(() => {
+            game = new Game([playerA, playerB]);
+            game.registerComponent('Dice', {values: {value: 1}});
+
+            redDice = game.spawnEntity(['Dice'], {name: 'Red Dice'});
+            blueDice = game.spawnEntity(['Dice'], {name: 'Blue Dice'});
+        });
+
+        it('An Action can be registered and is doable by any Player.', () => {
+            const increase = game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1);
+
+            game.start();
+            
+            expect(game.getActions(playerA)).to.have.length(2);
+            expect(game.getActions(playerB)).to.have.length(2);
+        });
+
+        it('An Action can\'t if it already exists.', () => {
+            game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1);
+
+            expect(() => game.registerAction('increase', 
+            (Player, Dice) => `${Player} increased the ${Dice}`,
+            (Player, Dice) => Dice.value += 1)).to.throw(InvalidActionException);
+        });
+
+        it('The Components for the Language must be a subset of the Components for the Effect.', () => {
+            expect(() => game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Dice) => Dice.value += 1)).to.throw(InvalidActionException);
+        });
+
+        it('The refered Components in both the Language and the Effect must exist.', () => {
+            expect(() => game.registerAction('increase', 
+                (Something) => `${Something} happened!`,
+                (Something) => true)).to.throw(InvalidActionException);
+        });
+
+        it('Actions that involve Players are special; They are returned when Queried for Actions of a Player.', () => {
+            game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1);
+
+            game.registerAction('reset',
+                (Dice) => `${Dice} has been reset!`,
+                (Dice) => Dice.value = 1);
+
+            expect(game.getActions(playerA)).to.have.length(2); //2 Dice
+            expect(game.getActions(playerB)).to.have.length(2); //2 Dice
+            expect(game.getActions()).to.have.length(2 * 2); //2 Dice * 2 Actions
+        });
+
+        it('Actions can be called from other Actions or externally, too. That\'s why it\'s smart to save the Actions in a local variable.', () => {
+            const increase = game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1);
+
+            const doubleIncrease = game.registerAction('double-increase', 
+                (Player, Dice) => `${Player} double-increased ${Dice}`,
+                (Player, Dice) => {increase(Dice); increase(Dice);});
+
+            game.do(doubleIncrease, playerA, redDice);
+            expect(redDice.value).to.equal(3);
+        });
+
+        it('Actions can be guarded. Actions are only "available" when all Guards evaluate truthy.', () => {
+            const increase = game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1);
+            game.registerGuard(increase, () => false, `Does not work!`);
+            
+            expect(game.getActions(playerA)).to.have.length(0);
+            expect(game.getActions(playerB)).to.have.length(0);
+            expect(game.getActions()).to.have.length(0 * 0);
+        });
+
+        //Guards need to reference a real action
+        //Guards are evaluated at each call and can return true/false
+        //Guard log needs to be subset of guard log itself
+        //The checked Components in the Guard need to be a subset of the corresponding Action
     });
 });

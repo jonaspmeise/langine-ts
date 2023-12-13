@@ -1,8 +1,9 @@
 import { Dynamic } from "./Dynamic";
-import { PlainObject } from "./Types";
+import { Game } from "./Game";
+import { EntityID, PlainObject } from "./Types";
 
 export class Entity extends Dynamic {
-    constructor(values: PlainObject = {}) {
+    constructor(name: EntityID, onChange: ((entity: EntityID, key: string, value: unknown) => void), values: PlainObject = {}) {
         super();
         
         Object.assign(this, values);

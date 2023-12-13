@@ -2,23 +2,19 @@ import { expect } from "chai";
 import { Game } from "../src/Game";
 import { Player } from "../src/Player";
 
-describe('Tic-Tac-Toe Integration-Tests.', () => {
+describe('Tic-Tac-Toe Tests.', () => {
     let tictactoe: Game;
 
     const playerA = new Player('Player A');
     const playerB = new Player('Player B');
 
-    const random = <A> (a: A[]): A => {
-        return a[Math.floor(Math.random() * a.length)];
-    }
+    const random = <A> (a: Set<A>): A => {
+        return [...a][Math.floor(Math.random() * a.size)];
+    };
 
     beforeEach(() => {
         //Game Definition
-        tictactoe = new Game([playerA, playerB]);
-        
-        tictactoe.registerState('Initial');
-        tictactoe.registerState('Play');
-        tictactoe.registerState('Gameover');    
+        tictactoe = new Game([playerA, playerB]);  
         
         //Components
         tictactoe.registerComponent('Size', {values: {value: 4}});

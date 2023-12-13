@@ -1,2 +1,5 @@
 export type PlainObject = {[key: string]: unknown};
-export type ID = string;
+export type ComponentID = string;
+export type EntityID = string;
+export type StateID = string;
+export type ActionID = string;
