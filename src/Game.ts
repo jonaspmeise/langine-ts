@@ -8,16 +8,24 @@ import { MissingSetupException } from "./MissingSetupException";
 import { NonExistingException } from "./NonExistingException";
 import { Player } from "./Player";
 import { State } from "./State";
-import { ActionID, ComponentID, EntityID, PlainObject, StateID } from "./Types";
+import { ActionID, ComponentID, EntityID, PlainObject, PlayerID, StateID } from "./Types";
 import { InvalidEntityException } from "./InvalidEntityException";
-import { cartesianProduct, intersection } from "./Util";
+import { cartesianProduct, getAllCombinations, getFunctionParameters, intersection } from "./Util";
+import { InvalidActionException } from "./InvalidActionException";
 
 export class Game implements GameAccessor {
+    private iteration: number = 0;
+
     private idByComponent: Map<Component, ComponentID> = new Map();
     private idByEntity: Map<Entity, EntityID> = new Map();
     private proxyToEntity: Map<ProxyHandler<Entity>, EntityID> = new Map();
+
+    private playerByID: Map<PlayerID, Player> = new Map();
+    private idByPlayer: Map<Player, PlayerID> = new Map();
     
-    private actions: Set<Action> = new Set();
+    private actions: Map<ActionID, Action> = new Map();
+    private actionsByPlayer: Map<PlayerID, Map<ActionID, Set<EntityID[]>>> = new Map();
+    private allActions: Map<ActionID, Set<EntityID[]>> = new Map();
 
     private componentById: Map<ComponentID, Component> = new Map();
     private entityById: Map<EntityID, Entity> = new Map();
@@ -26,9 +34,26 @@ export class Game implements GameAccessor {
     private componentsByEntity: Map<EntityID, Set<ComponentID>> = new Map();
 
     private parentsByComponent: Map<ComponentID, Set<ComponentID>> = new Map();
+    private childrenByComponent: Map<ComponentID, Set<ComponentID>> = new Map();
 
-    constructor(private players: Player[]) {}
+    private
+
+    constructor(private initialPlayers: Player[]) {
+        if(initialPlayers.length == 0) throw new MissingSetupException(`You can\'t start a Game without atleast 1 Player!`);
+
+        this.registerComponent('Player', {values: {player: undefined}});
+        this.registerComponent('Game');
+    }
     
+    public registerPlayer = (player: Player): Player => {
+        const id = player.name;
+
+        this.playerByID.set(id, player);
+        this.idByPlayer.set(player, id);
+
+        return player;
+    }
+
     public registerComponent = (name: ComponentID, optional?: { parents?: (string | Component)[], values?: PlainObject}): Component => {
         //set default values
         optional = optional || {};
@@ -50,7 +75,14 @@ export class Game implements GameAccessor {
         this.componentById.set(name, component);
         this.idByComponent.set(component, name);
         this.entitiesByComponent.set(name, new Set());
-        this.parentsByComponent.set(name, new Set(parentDefinitions.map((parentComponent) => this.idByComponent.get(parentComponent)!)));
+
+        this.parentsByComponent.set(name, new Set(parentDefinitions.map((parentComponent) => {
+            //update parent->child reference
+            const parentID = this.idByComponent.get(parentComponent)!;
+            this.childrenByComponent.set(parentID, (this.childrenByComponent.get(parentID) ?? new Set).add(name));
+
+            return parentID;
+        })));
 
         return component;
     }
@@ -58,15 +90,19 @@ export class Game implements GameAccessor {
     public spawnEntity = (components: (EntityID | Component)[], optional?: { name?: string, values?: PlainObject}): Entity => {
         //set default values
         optional = optional || {};
-        const name = optional.name || randomUUID();
         optional.values = optional.values || {};
 
-        if(this.entityById.has(name)) throw new InvalidEntityException(`An Entity with the name "${optional.name}" already exists! Please consider using another Name or let it automatically generate an ID.`);
+        //only when setting the Name/ID manually
+        if(optional.name !== undefined && this.entityById.has(optional.name)) throw new InvalidEntityException(`An Entity with the name "${optional.name}" already exists! Please consider using another Name or let it automatically generate an ID.`);
+        
         if(components.length == 0) throw new InvalidEntityException(`The Entity "${optional.name}" can't be spawned without any Base Components! Consider defining some Base Components.`);
 
         //unify & validate component-references
         const componentDefinitions = this.validate(components);
         const componentIds = componentDefinitions.map((component) => this.idByComponent.get(component)!);
+
+        //add components to automatically generated name to make it more expressive
+        const name = optional.name || `${componentIds.join('_')}-${randomUUID()}`
 
         //accumulate values from all components and from the initial values itself
         const values = componentDefinitions.reduce((acc, current) => Object.assign(acc, current), {});
@@ -139,7 +175,7 @@ export class Game implements GameAccessor {
         //case 2: Filter is a function
         if(typeof filter == 'function') {
             //figure out which components to query (from function definition)
-            const args = (filter.toString().split('=>')[0]).match(/[a-z0-9_]+/gi)!;
+            const args = getFunctionParameters(filter);
 
             //default: return all Entities
             if(args == null) return new Set(this.entityById.values());
@@ -238,14 +274,61 @@ export class Game implements GameAccessor {
     };
 
     public findEntityById = (name: EntityID): Entity => {
-        const component = this.componentById.get(name);
+        const entity = this.entityById.get(name);
 
-        if(component === undefined) throw new NonExistingException(`The Component "${name}" does not exist! Did you register it already?`);
-        return component;
+        if(entity === undefined) throw new NonExistingException(`The Entity "${name}" does not exist! Did you register it already?`);
+        return entity;
     };
 
-    public getActions = (player?: Player): Set<Action> => {
-        return new Set();
+    public getActions = (player?: PlayerID | Player): [ActionID, EntityID[]][] => {
+        if(player === undefined) return getAllCombinations(this.allActions); //TODO: Fix this
+
+        if(player instanceof Player) player = this.idByPlayer.get(player) as PlayerID;
+        
+        return getAllCombinations(this.actionsByPlayer.get(player)!);
+    };
+
+    private updateActions = (): void => {
+        //reset all actions so far
+        this.actionsByPlayer = new Map();
+        this.allActions = new Map();
+        [...this.playerByID.keys()].forEach((player) => this.actionsByPlayer.set(player, new Map()));
+
+        //evaluate each action to see whether its applicable
+        [...this.actions.entries()].map(([actionID, action]) => {
+            //get the components that can match this function
+            const event = action.event;
+            let includesPlayerComponent: boolean = false;
+
+            const componentsToQuery: ComponentID[] = getFunctionParameters(event);
+            
+            //FIXME: This should be smoother and more elegant
+            if(componentsToQuery[0] == 'Player') includesPlayerComponent = true;
+
+            cartesianProduct(componentsToQuery.map((componentId) => this.entitiesByComponent.get(componentId)!))
+                .map((combination) => combination.map((entityID) => this.findEntityById(entityID)))
+                    //TODO: Filter out the combinations that don't match any guard
+                .filter((combination) => true)
+                //Return all Entities back to their IDs to keep the passed value lightweight
+                .map((combination) => combination.map((entity) => this.idByEntity.get(entity)!))
+                .forEach((combination) => {
+                    if(includesPlayerComponent) {
+                        const playerID = this.entityById.get(combination[0])!.player;
+                        const combinationForAction: Map<ActionID, Set<EntityID[]>> = this.actionsByPlayer.get(playerID) ?? new Map();
+                        const targetsForCombination: Set<EntityID[]> = combinationForAction.get(actionID) ?? new Set();
+                        
+                        targetsForCombination.add(combination);
+                        combinationForAction.set(actionID, targetsForCombination);
+
+                        //Map "inside"-Player (ingame-logic) to "outside"-Player (Framework-logic)
+                        this.actionsByPlayer.set(playerID, combinationForAction);
+                    }
+
+                    const allCombinationForAction = this.allActions.get(actionID) ?? new Set();
+                    allCombinationForAction.add(combination);
+                    this.allActions.set(actionID, allCombinationForAction);
+                });
+        });
     };
 
     public registerState = (name: StateID): State => {
@@ -254,20 +337,72 @@ export class Game implements GameAccessor {
     
     public registerAction = (name: ActionID, language: string | ((...words: Entity[]) => string), event: (...args: Entity[]) => void): ((...args: Entity[]) => void) => 
     {
-        if(this.actions.has(name)) throw new InvalidEntityException(`The Action "${name}" already exists!`);
+        if(this.actions.has(name)) throw new InvalidActionException(`The Action "${name}" already exists!`);
+        
+        const action = new Action(this, language, event);
+        this.actions.set(name, action);
 
-        return event;
+        return (...args: Entity[]) => {
+            //TODO: Return additional values here/call step()?
+            //force updates of other componnets in the background? (update reference queries etc.)
+            event(...args);
+        };
     };
 
-    public registerGuard = (action: string | Action, check: (...args: Entity[]) => boolean, message?: string | ((...args: Entity[]) => string)) => {
+    public registerGuard = (action: ActionID, check: (...args: Entity[]) => boolean, message?: string | ((...args: Entity[]) => string)) => {
         throw new Error("Method not implemented.");
     };
     
-    public start = (): void => {
+    public step = (): void => {
+        //Initialize Standard Components and Entities at the start
+        if(this.iteration == 0) {
+            let gameComponent: ComponentID;
+
+            if (this.childrenByComponent.has('Game')) {
+                //Take the first "other" definition of Game (the first Child)
+                gameComponent = [...this.childrenByComponent.get('Game')!][0];
+            } else {
+                gameComponent = 'Game';
+            }
+            
+            this.spawnEntity([gameComponent]);
+
+            let playerComponent: ComponentID;
+            if (this.childrenByComponent.has('Player')) {
+                //Take the first "other" definition of Game (the first Child)
+                playerComponent = [...this.childrenByComponent.get('Player')!][0];
+            } else {
+                playerComponent = 'Player';
+            }
+
+            this.initialPlayers.forEach((player) => { 
+                this.registerPlayer(player);
+                this.spawnEntity([playerComponent], {values: {player: player.name}});
+            });
+        }
+
+        this.updateActions();
+        
+        [...this.playerByID.entries()].forEach(([playerID, player]) => {
+            //FIXME: Fix the logic, because we have to map the physical player from outside the game to the player inside the game (Entity)
+            //Map "outside"-Player to "inside-Player"
+            const availableActions = this.getActions(playerID); 
+
+            //console.log(`Player ${playerID} has a total of ${availableActions.length} actions available: ${availableActions}`);
+        });
+
+        //const allActions = getAllCombinations(this.allActions)
+        //console.log(`In total, the following ${allActions.length} actions are available:`);
+        //allActions.forEach(([action, parameter]) => console.log(`${action.toUpperCase()}: ${parameter}`));
+
+        this.iteration++;
+    };
+
+    public do = (action: Action | ActionID, ...parameter: EntityID[]): void =>  {
         throw new Error("Method not implemented.");
     };
 
-    public do = (action: Action, ...parameter: Entity[]): void =>  {
-        throw new Error("Method not implemented.");
-    };
+    public componentExists = (componentID: ComponentID): boolean => {
+        return this.componentById.has(componentID);
+    }
 }

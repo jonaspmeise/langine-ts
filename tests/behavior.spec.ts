@@ -8,12 +8,14 @@ import { Component } from "../src/Component";
 import { InvalidEntityException } from "../src/InvalidEntityException";
 import { InvalidActionException } from "../src/InvalidActionException";
 import { Entity } from "../src/Entity";
+import { fail } from "assert";
+import { InvalidGuardException } from "../src/InvalidGuardException";
 
 describe('Behavior tests.', () => {
     let game: Game;
 
     beforeEach(() => {
-        game = new Game([new Player('Dummy')]);
+        game = new Game([new Player('Dummy A'), new Player('Dummy B')]);
     });
 
     describe('Registering Components.', () => {
@@ -28,6 +30,42 @@ describe('Behavior tests.', () => {
 
             expect(component).to.deep.equal({x: 1, y: 1});
         });
+
+        it('Registering a Component that matches a predefined Component (Player, Game) throws an Error.', () => {
+            expect(() => game.registerComponent('Player')).to.throw(InvalidComponentException);
+            expect(() => game.registerComponent('Game')).to.throw(InvalidComponentException);
+        });
+
+        it('A new Component can inherit predefined Component Types to increase their functionality.', () => {
+            const aiPlayer = game.registerComponent('AiPlayer', {parents: ['Player'], values: {script: 'script.txt'}});
+            const dummyGame = game.registerComponent('DummyGame', {parents: ['Game'], values: {turnCount: 0}});
+
+            expect(aiPlayer).to.deep.equal({script: 'script.txt', player: undefined});
+        });
+
+        it('Player and Game-Entiites are automatically created in the first Step.', () => {
+            game.step();
+
+            expect(game.queryEntities('Player')).to.have.length(2);
+            expect(game.queryEntities('Game')).to.have.length(1);
+
+            expect([...game.queryEntities('Player')][0].player).to.be.not.undefined;
+        });
+
+        it('If Custom Components of Type "Player" or "Game" are defined, these are created instead.', () => {
+            const aiPlayer = game.registerComponent('AiPlayer', {parents: ['Player'], values: {script: 'script.txt'}});
+            const dummyGame = game.registerComponent('DummyGame', {parents: ['Game'], values: {turnCount: 0}});
+
+            game.step();
+
+            expect(game.queryEntities(aiPlayer)).to.have.length(2);
+            expect(game.queryEntities(dummyGame)).to.have.length(1);
+
+            expect([...game.queryEntities(aiPlayer)][0].script).to.equal('script.txt');
+        });
+
+        //Game & Player-Entities automatically register themselves based on the context if the user didn't do so yet.
+        //Game & Player-Entities don't automtically register themselves if the Player already defined them.
 
         it('Registering a Component with a Parent (by reference) works.', () => {
             game.registerComponent('test', {values: {x: 1, y: 1}});
@@ -85,6 +123,16 @@ describe('Behavior tests.', () => {
             game.spawnEntity(['colorable'], {name: 'the evening light', values: {color: 'yellow'}});
         });
 
+        it('Automatically generated Game/Player-Entities can be acessed after the initial Step.', () => {
+            expect(game.queryEntities('Player')).to.have.length(0);
+            expect(game.queryEntities('Game')).to.have.length(0);
+
+            game.step();
+
+            expect(game.queryEntities('Player')).to.have.length(2);
+            expect(game.queryEntities('Game')).to.have.length(1);
+        });
+        
         it('Querying with many identical filters is the same as a single filter.', () => {
             expect(game.queryEntities(['colorable', 'colorable', 'colorable', 'colorable']).size).to.equal(game.queryEntities('colorable').size);
         });
@@ -93,7 +141,7 @@ describe('Behavior tests.', () => {
             expect(game.queryEntities('colorable')).to.have.length(3);
             expect(game.queryEntities('placeable')).to.have.length(3);
             expect(game.queryEntities('moveable')).to.have.length(2);
-            expect(game.queryEntities()).to.have.length(4); //shortcut for: all components
+            expect(game.queryEntities()).to.have.length(4); //shortcut for: all components + Player
         });
 
         it('Finds Entities that have all the Components in a given Query.', () => {
@@ -261,29 +309,43 @@ describe('Behavior tests.', () => {
             game = new Game([playerA, playerB]);
             game.registerComponent('Dice', {values: {value: 1}});
 
+            game.registerAction('shuffle', 
+                (Dice) => `${Dice} has been shuffled.`,
+                (Dice) => Dice.value = Math.floor(Math.random()*6)+1
+            );
+
             redDice = game.spawnEntity(['Dice'], {name: 'Red Dice'});
             blueDice = game.spawnEntity(['Dice'], {name: 'Blue Dice'});
         });
+/*
+action without any parameters....? does not exist?
+
+doing an action which is not valid anymore in that step throws an error.
+*/
 
         it('An Action can be registered and is doable by any Player.', () => {
-            const increase = game.registerAction('increase', 
-                (Player, Dice) => `${Player} increased the ${Dice}`,
+            game.registerAction('increase', 
+                (Player, Dice) => `${Player} increases the ${Dice}`,
                 (Player, Dice) => Dice.value += 1);
 
-            game.start();
+            game.step();
             
             expect(game.getActions(playerA)).to.have.length(2);
             expect(game.getActions(playerB)).to.have.length(2);
         });
 
-        it('An Action can\'t if it already exists.', () => {
+        it('An Action can\'t be registered if it already exists.', () => {
             game.registerAction('increase', 
-                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => `${Player} increases the ${Dice}`,
                 (Player, Dice) => Dice.value += 1);
 
             expect(() => game.registerAction('increase', 
             (Player, Dice) => `${Player} increased the ${Dice}`,
             (Player, Dice) => Dice.value += 1)).to.throw(InvalidActionException);
+        });
+
+        it('An Action can\'t be registered if the Event Function takes no Components as parameters.', () => {
+            expect(() => game.registerAction('something', 'something', () => true)).to.throw(InvalidActionException);
         });
 
         it('The Components for the Language must be a subset of the Components for the Effect.', () => {
@@ -306,22 +368,25 @@ describe('Behavior tests.', () => {
             game.registerAction('reset',
                 (Dice) => `${Dice} has been reset!`,
                 (Dice) => Dice.value = 1);
+            
+            game.step();
 
             expect(game.getActions(playerA)).to.have.length(2); //2 Dice
             expect(game.getActions(playerB)).to.have.length(2); //2 Dice
-            expect(game.getActions()).to.have.length(2 * 2); //2 Dice * 2 Actions
+            expect(game.getActions()).to.have.length(2 * 2 + 2 + 2); //Increase: 2 Players * 2 Dice, Shuffle: 2 Dice, Rest: 2 Dice = 8
         });
 
         it('Actions can be called from other Actions or externally, too. That\'s why it\'s smart to save the Actions in a local variable.', () => {
             const increase = game.registerAction('increase', 
-                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => `${Player} increased ${Dice} by 1`,
                 (Player, Dice) => Dice.value += 1);
 
             const doubleIncrease = game.registerAction('double-increase', 
-                (Player, Dice) => `${Player} double-increased ${Dice}`,
-                (Player, Dice) => {increase(Dice); increase(Dice);});
+                (Player, Dice) => `${Player} double-increased ${Dice} by 2`,
+                (Player, Dice) => {increase(Player, Dice); increase(Player, Dice);});
 
-            game.do(doubleIncrease, playerA, redDice);
+            doubleIncrease(playerA, redDice);
+            game.step();
             expect(redDice.value).to.equal(3);
         });
 
@@ -329,16 +394,36 @@ describe('Behavior tests.', () => {
             const increase = game.registerAction('increase', 
                 (Player, Dice) => `${Player} increased the ${Dice}`,
                 (Player, Dice) => Dice.value += 1);
-            game.registerGuard(increase, () => false, `Does not work!`);
+            game.registerGuard('increase', (Dice) => Dice.value < 5, `Does not work!`);
             
             expect(game.getActions(playerA)).to.have.length(0);
             expect(game.getActions(playerB)).to.have.length(0);
             expect(game.getActions()).to.have.length(0 * 0);
         });
 
-        //Guards need to reference a real action
-        //Guards are evaluated at each call and can return true/false
-        //Guard log needs to be subset of guard log itself
-        //The checked Components in the Guard need to be a subset of the corresponding Action
+        it('Guards must reference an existing Action.', () => {
+            expect(() => game.registerGuard('something-that-does-not-exist', () => true)).to.throw(InvalidGuardException);
+        });
+
+        it('All Guards are evaluated when an Action is executed.', () => {
+            let executionCounter = 0;
+
+            game.registerGuard('increase', (Dice) => {executionCounter++; return Dice.value <= 6});
+            game.registerGuard('increase', (Dice) => {executionCounter++; return Dice.value > 0});
+            game.registerGuard('increase', (Player, Game) => {executionCounter++; return Game.currentPlayer == Player});
+
+            game.do('Increase', 'playerA', 'Red Dice');
+
+            expect(executionCounter).to.equal(3);
+        });
+
+        it('The Message Function of a Guard needs to be a subset of the Components referenced in the Check Function.', () => {
+            expect(() => game.registerGuard('increase', (Dice) => true, (Player, Dice) => 'xd')).to.throw(InvalidGuardException);       
+        });
+
+        it('The Check Function (and thus the Message Function) need to reference Components that are a Subset of the Components of the referenced Action.', () => {
+            expect(() => game.registerGuard('increase', (Game) => true)).to.throw(InvalidGuardException);
+            expect(() => game.registerGuard('increase', (Dice) => true, (Dice1, Dice2) => 'xd')).to.throw(InvalidGuardException);     
+        });
     });
 });

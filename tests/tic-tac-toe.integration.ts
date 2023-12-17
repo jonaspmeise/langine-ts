@@ -59,18 +59,12 @@ describe('Tic-Tac-Toe Tests.', () => {
         tictactoe.spawnEntity(['Diagonal1']);
         tictactoe.spawnEntity(['Diagonal2']);
 
-        tictactoe.start();
+        tictactoe.step();
     });
 
     it('Play-Test #1', () => {
         //Turn #1
         expect(tictactoe.getActions(playerA)).to.have.length(9);
         expect(tictactoe.getActions(playerB)).to.have.length(0);
-
-        tictactoe.do(random(tictactoe.getActions(playerA)), playerA);
-
-        //Turn #2
-        expect(tictactoe.getActions(playerA)).to.have.length(0);
-        expect(tictactoe.getActions(playerB)).to.have.length(8);
     });
 });

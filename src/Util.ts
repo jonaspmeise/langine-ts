@@ -2,10 +2,12 @@ export const isReferenceArray = (value: unknown[]): value is string[] => {
     return Array.isArray(value) && value.every((item) => typeof item === 'string');
 };
 
-export const cartesianProduct = <T>(arrays: T[][]): T[][] => {
+export const cartesianProduct = <T>(arrays: (T[] | Set<T>)[]): T[][] => {
     if (!arrays || arrays.length === 0) {
       return [[]];
     }
+
+    if(arrays[0] instanceof Set) arrays = arrays.map((set) => [...set]);
   
     const result: T[][] = [];
   
@@ -72,4 +74,22 @@ export const createPlainObject = (originalObject: { [key: string]: any }): { [ke
     });
 
     return plainObject;
+};
+
+export const getAllCombinations = <K,V> (map: Map<K, Set<V>>): [K, V][] => {
+    const combinations: [K, V][] = [];
+
+    if(!map) return [];
+  
+    map.forEach((valueSet, key) => {
+        valueSet.forEach((value) => {
+            combinations.push([key, value]);
+        });
+    });
+  
+    return combinations;
+};
+
+export const getFunctionParameters = (event: Function | ((args: any[]) => any)): string[] => {
+    return (event.toString().split('=>')[0]).match(/[a-z0-9_]+/gi)! || [];
 };

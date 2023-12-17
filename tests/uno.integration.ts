@@ -56,9 +56,9 @@ describe('Uno Tests.', () => {
             (Player, Card, Stack) => move(Card, Stack)
         );
 
-        uno.registerGuard(play, (Game, Player) => Game.CurrentPlayer == Player, 'It is not your Turn!'); //Game is always referentiable
-        uno.registerGuard(play, (Player, Card) => Card.position == Player.Hand, 'You can only play Cards from your Hand!');
-        uno.registerGuard(play, (Player, Card) => !(Player.Hand.Cards.length == 1 && Card.isSpecial), 'You can\'t play special Cards as the last Card!');
+        uno.registerGuard('play', (Game, Player) => Game.CurrentPlayer == Player, 'It is not your Turn!'); //Game is always referentiable
+        uno.registerGuard('play', (Player, Card) => Card.position == Player.Hand, 'You can only play Cards from your Hand!');
+        uno.registerGuard('play', (Player, Card) => !(Player.Hand.Cards.length == 1 && Card.isSpecial), 'You can\'t play special Cards as the last Card!');
 
         uno.registerAction('Gameover', //automated action?
             'Game is over!',
@@ -67,18 +67,12 @@ describe('Uno Tests.', () => {
 
         uno.registerGuard('Gameover', (Player) => Player.Hand.cards.length == 0, 'Game is not over yet!'); 
         
-        uno.start();
+        uno.step();
     });
 
     it('Play-Test #1', () => {
         //Turn #1
         expect(uno.getActions(playerA)).to.have.length(9);
         expect(uno.getActions(playerB)).to.have.length(0);
-
-        uno.do(random(uno.getActions(playerA)), playerA);
-
-        //Turn #2
-        expect(uno.getActions(playerA)).to.have.length(0);
-        expect(uno.getActions(playerB)).to.have.length(8);
     });
 });

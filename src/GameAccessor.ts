@@ -4,7 +4,7 @@ import { Entity } from "./Entity";
 import { Guard } from "./Guard";
 import { Player } from "./Player";
 import { State } from "./State";
-import { ActionID, ComponentID, EntityID, PlainObject, StateID } from "./Types";
+import { ActionID, ComponentID, EntityID, PlainObject, PlayerID, StateID } from "./Types";
 
 export interface GameAccessor {
     addComponentToEntity(entity: EntityID | Entity, component: ComponentID | Component, values?: PlainObject): Entity;
@@ -32,13 +32,12 @@ export interface GameAccessor {
             event: (...args: Entity[]) => void //? o_Ô
         ): ((...args: Entity[]) => void);
     registerGuard(
-        action: ActionID | Action, 
+        action: ActionID, 
         check: (...args: Entity[]) => boolean, 
-        message?: string | ((...args: Entity[]) => string),
-        name?: ActionID
+        message?: string | ((...args: Entity[]) => string)
     ): Guard;
 
-    start(): void;
-    do(action: Action, ...parameter: Entity[]): void;
-    getActions(player?: Player): Set<Action>;
+    step(): void;
+    do(action: Action, ...parameter: EntityID[]): void;
+    getActions(player?: PlayerID | Player): [ActionID, EntityID[]][];
 }
