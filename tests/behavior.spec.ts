@@ -390,15 +390,17 @@ doing an action which is not valid anymore in that step throws an error.
             expect(redDice.value).to.equal(3);
         });
 
-        it('Actions can be guarded. Actions are only "available" when all Guards evaluate truthy.', () => {
+        it('Actions can be guarded. Actions are only legal when all Guards evaluate truthy (not exactly, but for now).', () => {
             const increase = game.registerAction('increase', 
                 (Player, Dice) => `${Player} increased the ${Dice}`,
                 (Player, Dice) => Dice.value += 1);
-            game.registerGuard('increase', (Dice) => Dice.value < 5, `Does not work!`);
+            game.registerGuard('increase', (Dice) => Dice.value < 5, `Does not work!`); //TODO: Player is interpreted as Dice here, because there is no name matching yet
             
+            game.step();
+
             expect(game.getActions(playerA)).to.have.length(0);
             expect(game.getActions(playerB)).to.have.length(0);
-            expect(game.getActions()).to.have.length(0 * 0);
+            expect(game.getActions()).to.have.length(0 + 0);
         });
 
         it('Guards must reference an existing Action.', () => {
@@ -425,5 +427,14 @@ doing an action which is not valid anymore in that step throws an error.
             expect(() => game.registerGuard('increase', (Game) => true)).to.throw(InvalidGuardException);
             expect(() => game.registerGuard('increase', (Dice) => true, (Dice1, Dice2) => 'xd')).to.throw(InvalidGuardException);     
         });
+
+        //PRIORITY IN GUARD LEVELS
+        //Guards have level, that take precedence over lower level guards
+        //TODO: How to implement "overwriting" certain rules.
+        //eg:   level 0 guard A -> false (can only play during your turn).
+        //      level 1 guard B -> true (can play during every turn).
+
+        //guard check arguments dont have to be in exactly the same order as the Action, they can be matched based on naming
+        //TODO: Allow "looser" coupling, e.g. through subset name search? what is the threshold? --> probably not good idea
     });
 });

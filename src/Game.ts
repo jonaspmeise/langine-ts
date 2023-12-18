@@ -8,35 +8,37 @@ import { MissingSetupException } from "./MissingSetupException";
 import { NonExistingException } from "./NonExistingException";
 import { Player } from "./Player";
 import { State } from "./State";
-import { ActionID, ComponentID, EntityID, PlainObject, PlayerID, StateID } from "./Types";
+import { ActionID, ComponentID, EntityID, GuardID, PlainObject, PlayerID, StateID } from "./Types";
 import { InvalidEntityException } from "./InvalidEntityException";
 import { cartesianProduct, getAllCombinations, getFunctionParameters, intersection } from "./Util";
 import { InvalidActionException } from "./InvalidActionException";
+import { Guard } from "./Guard";
 
 export class Game implements GameAccessor {
     private iteration: number = 0;
 
-    private idByComponent: Map<Component, ComponentID> = new Map();
-    private idByEntity: Map<Entity, EntityID> = new Map();
-    private proxyToEntity: Map<ProxyHandler<Entity>, EntityID> = new Map();
+    public idByComponent: Map<Component, ComponentID> = new Map();
+    public idByEntity: Map<Entity, EntityID> = new Map();
+    public proxyToEntity: Map<ProxyHandler<Entity>, EntityID> = new Map();
 
-    private playerByID: Map<PlayerID, Player> = new Map();
-    private idByPlayer: Map<Player, PlayerID> = new Map();
+    public playerByID: Map<PlayerID, Player> = new Map();
+    public idByPlayer: Map<Player, PlayerID> = new Map();
     
-    private actions: Map<ActionID, Action> = new Map();
-    private actionsByPlayer: Map<PlayerID, Map<ActionID, Set<EntityID[]>>> = new Map();
-    private allActions: Map<ActionID, Set<EntityID[]>> = new Map();
+    public actionById: Map<ActionID, Action> = new Map();
+    public actionsByPlayer: Map<PlayerID, Map<ActionID, Set<EntityID[]>>> = new Map();
+    public allActions: Map<ActionID, Set<EntityID[]>> = new Map();
 
-    private componentById: Map<ComponentID, Component> = new Map();
-    private entityById: Map<EntityID, Entity> = new Map();
+    public componentById: Map<ComponentID, Component> = new Map();
+    public entityById: Map<EntityID, Entity> = new Map();
 
-    private entitiesByComponent: Map<ComponentID, Set<EntityID>> = new Map();
-    private componentsByEntity: Map<EntityID, Set<ComponentID>> = new Map();
+    public entitiesByComponent: Map<ComponentID, Set<EntityID>> = new Map();
+    public componentsByEntity: Map<EntityID, Set<ComponentID>> = new Map();
 
-    private parentsByComponent: Map<ComponentID, Set<ComponentID>> = new Map();
-    private childrenByComponent: Map<ComponentID, Set<ComponentID>> = new Map();
+    public parentsByComponent: Map<ComponentID, Set<ComponentID>> = new Map();
+    public childrenByComponent: Map<ComponentID, Set<ComponentID>> = new Map();
 
-    private
+    public guardForAction: Map<ActionID, Set<GuardID>> = new Map();
+    public guardById: Map<GuardID, Guard> = new Map();
 
     constructor(private initialPlayers: Player[]) {
         if(initialPlayers.length == 0) throw new MissingSetupException(`You can\'t start a Game without atleast 1 Player!`);
@@ -295,7 +297,7 @@ export class Game implements GameAccessor {
         [...this.playerByID.keys()].forEach((player) => this.actionsByPlayer.set(player, new Map()));
 
         //evaluate each action to see whether its applicable
-        [...this.actions.entries()].map(([actionID, action]) => {
+        [...this.actionById.entries()].map(([actionID, action]) => {
             //get the components that can match this function
             const event = action.event;
             let includesPlayerComponent: boolean = false;
@@ -307,9 +309,22 @@ export class Game implements GameAccessor {
 
             cartesianProduct(componentsToQuery.map((componentId) => this.entitiesByComponent.get(componentId)!))
                 .map((combination) => combination.map((entityID) => this.findEntityById(entityID)))
-                    //TODO: Filter out the combinations that don't match any guard
-                .filter((combination) => true)
-                //Return all Entities back to their IDs to keep the passed value lightweight
+                .filter((combination) => {
+                    const guards = this.guardForAction.get(actionID);
+
+                    if(guards) {
+                        [...guards].map((id) => {
+                            const guard = this.guardById.get(id)!;
+
+                            //TODO: Implement loose coupling (order invariant)
+                            //TODO: Implement Guard levels
+                            //TODO: Implement overwriting (Guard A > Guard B, if....)
+                            return guard.check(...combination);
+                        });
+                    }
+
+                    return true;
+                })
                 .map((combination) => combination.map((entity) => this.idByEntity.get(entity)!))
                 .forEach((combination) => {
                     if(includesPlayerComponent) {
@@ -337,10 +352,10 @@ export class Game implements GameAccessor {
     
     public registerAction = (name: ActionID, language: string | ((...words: Entity[]) => string), event: (...args: Entity[]) => void): ((...args: Entity[]) => void) => 
     {
-        if(this.actions.has(name)) throw new InvalidActionException(`The Action "${name}" already exists!`);
+        if(this.actionById.has(name)) throw new InvalidActionException(`The Action "${name}" already exists!`);
         
         const action = new Action(this, language, event);
-        this.actions.set(name, action);
+        this.actionById.set(name, action);
 
         return (...args: Entity[]) => {
             //TODO: Return additional values here/call step()?
@@ -350,7 +365,16 @@ export class Game implements GameAccessor {
     };
 
     public registerGuard = (action: ActionID, check: (...args: Entity[]) => boolean, message?: string | ((...args: Entity[]) => string)) => {
-        throw new Error("Method not implemented.");
+        const guard = new Guard(this, action, check, message);
+        const guardID: GuardID = `Guard-${action}-${randomUUID}`;
+
+        this.guardById.set(guardID, guard);
+        this.guardForAction.set(action, (this.guardForAction.get(action) || new Set()).add(guardID));
+
+        //TODO: Return an "interface" for that method? Like e.g. Disable/Enable/Toggle Guard?
+        //TODO: Should do this for __all__ return values?
+
+        return guard;
     };
     
     public step = (): void => {
