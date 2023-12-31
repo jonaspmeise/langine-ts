@@ -6,14 +6,6 @@ import { InvalidRulebookException } from "../../src/Exceptions/InvalidRulebookEx
 describe('Parsing Tests. Convert a Rulebook into a Set of Game Rules.', () => {
     const filename = './tests/parsing-rulebook/rulebook-1.md';
 
-    /*
-    A rulebook that points at an invalid file -> Exception
-    A rulebook that contains no matches -> Exception
-    A rulebook that contains matches, but does not have a named capture group called "rule" -> Exception
-    Multiline-Capture works.
-    A rule that has padded spaces is trimmed accordingly.
-    */
-
     it('A Rulebook can be loaded from a markdown file.', () => {
         const rulebookLoader = RulebookLoaderFactory.ofFile(filename);
         

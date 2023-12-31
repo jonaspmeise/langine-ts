@@ -328,8 +328,14 @@ export class Game implements GameAccessor {
         const action = new Action(this, language, event);
         this.actionById.set(name, action);
 
-        function abc(...args: Entity[]) {
-            event(...args);
+        const abc = (...args: (Entity | EntityID)[]) => {
+            const castArgs = args.map((arg) => {
+                if(!(arg instanceof Entity)) arg = this.entityById.get(arg)!; //FIXME: Remove this ! here
+
+                return arg;
+            });
+            
+            event(...castArgs);
         }
 
         abc.actionId = name;

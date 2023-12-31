@@ -1,4 +1,5 @@
 export class GameRule {
+    // @ts-ignore //TODO: This should disappear some point...
     private rule: string;
 
     constructor(rule: string) {
@@ -6,7 +7,5 @@ export class GameRule {
         this.rule = rule
             .trim()
             .replace(new RegExp('\\n', 'g'), ' ');
-
-        console.log('Constructed Rule:', this.rule);
     }
 }
