@@ -1,5 +1,4 @@
 import { Dynamic } from "./Dynamic";
-import { Game } from "./Game";
 import { EntityID, PlainObject } from "./Types";
 
 export class Entity extends Dynamic {

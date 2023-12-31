@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "tests-compile": "tsc --project tsconfig.json",
-    "tests-reporter": "nyc --reporter=html mocha --exit ./dist/tests/*.js",
+    "tests-reporter": "nyc --reporter=html mocha --exit ./dist/tests/**/*.js",
     "tests-run": "npm run tests-compile && npm run tests-reporter",
     "tests-background": "nodemon"
   },
@@ -35,5 +35,9 @@
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.0"
   }
 }

@@ -1,7 +1,7 @@
 import { Component } from "./Component";
 import { Game } from "./Game";
-import { InvalidActionException } from "./InvalidActionException";
-import { getFunctionParameters } from "./Util";
+import { InvalidActionException } from "../Exceptions/InvalidActionException";
+import { getFunctionParameters } from "../Util";
 
 export class Action {
     constructor(

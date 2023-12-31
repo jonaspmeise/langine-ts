@@ -1,8 +1,8 @@
 import { Entity } from "./Entity";
 import { Game } from "./Game";
-import { InvalidGuardException } from "./InvalidGuardException";
+import { InvalidGuardException } from "../Exceptions/InvalidGuardException";
 import { ActionID } from "./Types";
-import { getFunctionParameters } from "./Util";
+import { getFunctionParameters } from "../Util";
 
 export class Guard {
     constructor(game: Game, 

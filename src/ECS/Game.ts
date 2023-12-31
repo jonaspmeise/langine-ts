@@ -3,15 +3,15 @@ import { Action } from "./Action";
 import { Component } from "./Component";
 import { Entity } from "./Entity";
 import { GameAccessor } from "./GameAccessor";
-import { InvalidComponentException } from "./InvalidComponentException";
-import { MissingSetupException } from "./MissingSetupException";
-import { NonExistingException } from "./NonExistingException";
+import { InvalidComponentException } from "../Exceptions/InvalidComponentException";
+import { MissingSetupException } from "../Exceptions/MissingSetupException";
+import { NonExistingException } from "../Exceptions/NonExistingException";
 import { Player } from "./Player";
 import { State } from "./State";
-import { ActionID, ComponentID, EntityID, GuardID, PlainObject, PlayerID, StateID } from "./Types";
-import { InvalidEntityException } from "./InvalidEntityException";
-import { cartesianProduct, getAllCombinations, getFunctionParameters, intersection } from "./Util";
-import { InvalidActionException } from "./InvalidActionException";
+import { ActionFunction, ActionID, ComponentID, EntityID, GuardID, PlainObject, PlayerID, StateID } from "./Types";
+import { InvalidEntityException } from "../Exceptions/InvalidEntityException";
+import { cartesianProduct, getAllCombinations, getFunctionParameters, intersection } from "../Util";
+import { InvalidActionException } from "../Exceptions/InvalidActionException";
 import { Guard } from "./Guard";
 
 export class Game implements GameAccessor {
@@ -138,23 +138,6 @@ export class Game implements GameAccessor {
 
         this.entityById.set(id, entity);
     };
-
-    private makeUpdateable = (entity: Entity): ProxyHandler<Entity> => {
-        const proxy = new Proxy(entity, {
-            set: (target: this, key: string, value: unknown) => {
-                target[key] = value;
-        
-                //TODO: Figure out whether this needs an actual implementation
-                //this.registerAttributeChange(this.idByEntity.get(entity)!, key, value);
-        
-                return true;
-            }
-        });
-
-        this.proxyToEntity.set(proxy, this.idByEntity.get(entity)!);
-
-        return proxy;
-    }
 
     private validate = (components: (ComponentID | Component)[]): Component[] => {
         return components.map((baseComponent) => {
@@ -310,19 +293,7 @@ export class Game implements GameAccessor {
             cartesianProduct(componentsToQuery.map((componentId) => this.entitiesByComponent.get(componentId)!))
                 .map((combination) => combination.map((entityID) => this.findEntityById(entityID)))
                 .filter((combination) => {
-                    const guards = this.guardForAction.get(actionID);
-
-                    if(guards) {
-                        [...guards].map((id) => {
-                            const guard = this.guardById.get(id)!;
-
-                            //TODO: Implement loose coupling (order invariant)
-                            //TODO: Implement Guard levels
-                            //TODO: Implement overwriting (Guard A > Guard B, if....)
-                            return guard.check(...combination);
-                        });
-                    }
-
+                    //TODO: Implement guards here!
                     return true;
                 })
                 .map((combination) => combination.map((entity) => this.idByEntity.get(entity)!))
@@ -350,23 +321,30 @@ export class Game implements GameAccessor {
         throw new Error("Method not implemented.");
     };
     
-    public registerAction = (name: ActionID, language: string | ((...words: Entity[]) => string), event: (...args: Entity[]) => void): ((...args: Entity[]) => void) => 
+    public registerAction = (name: ActionID, language: string | ((...words: Entity[]) => string), event: (...args: Entity[]) => void): ActionFunction => 
     {
         if(this.actionById.has(name)) throw new InvalidActionException(`The Action "${name}" already exists!`);
         
         const action = new Action(this, language, event);
         this.actionById.set(name, action);
 
-        return (...args: Entity[]) => {
-            //TODO: Return additional values here/call step()?
-            //force updates of other componnets in the background? (update reference queries etc.)
+        function abc(...args: Entity[]) {
             event(...args);
-        };
+        }
+
+        abc.actionId = name;
+
+        //TODO: Return additional values here/call step()?
+        //force updates of other componnets in the background? (update reference queries etc.)
+        return abc;
     };
 
-    public registerGuard = (action: ActionID, check: (...args: Entity[]) => boolean, message?: string | ((...args: Entity[]) => string)) => {
+    public registerGuard = (action: ActionID | ActionFunction, check: (...args: Entity[]) => boolean, message?: string | ((...args: Entity[]) => string)) => {
+        //Transform ActionFunctions into their respective Action Reference
+        if(typeof action == 'function') action = action.actionId;
+        
         const guard = new Guard(this, action, check, message);
-        const guardID: GuardID = `Guard-${action}-${randomUUID}`;
+        const guardID: GuardID = `Guard-${action}-${randomUUID()}`;
 
         this.guardById.set(guardID, guard);
         this.guardForAction.set(action, (this.guardForAction.get(action) || new Set()).add(guardID));
@@ -406,19 +384,6 @@ export class Game implements GameAccessor {
         }
 
         this.updateActions();
-        
-        [...this.playerByID.entries()].forEach(([playerID, player]) => {
-            //FIXME: Fix the logic, because we have to map the physical player from outside the game to the player inside the game (Entity)
-            //Map "outside"-Player to "inside-Player"
-            const availableActions = this.getActions(playerID); 
-
-            //console.log(`Player ${playerID} has a total of ${availableActions.length} actions available: ${availableActions}`);
-        });
-
-        //const allActions = getAllCombinations(this.allActions)
-        //console.log(`In total, the following ${allActions.length} actions are available:`);
-        //allActions.forEach(([action, parameter]) => console.log(`${action.toUpperCase()}: ${parameter}`));
-
         this.iteration++;
     };
 

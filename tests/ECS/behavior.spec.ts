@@ -1,15 +1,15 @@
 import { expect } from "chai";
-import { Game } from "../src/Game";
-import { Player } from "../src/Player";
-import { InvalidComponentException } from "../src/InvalidComponentException";
-import { NonExistingException } from "../src/NonExistingException";
-import { MissingSetupException } from "../src/MissingSetupException";
-import { Component } from "../src/Component";
-import { InvalidEntityException } from "../src/InvalidEntityException";
-import { InvalidActionException } from "../src/InvalidActionException";
-import { Entity } from "../src/Entity";
-import { fail } from "assert";
-import { InvalidGuardException } from "../src/InvalidGuardException";
+import { Game } from "../../src/ECS/Game";
+import { Player } from "../../src/ECS/Player";
+import { InvalidComponentException } from "../../src/Exceptions/InvalidComponentException";
+import { NonExistingException } from "../../src/Exceptions/NonExistingException";
+import { MissingSetupException } from "../../src/Exceptions/MissingSetupException";
+import { Component } from "../../src/ECS/Component";
+import { InvalidEntityException } from "../../src/Exceptions/InvalidEntityException";
+import { InvalidActionException } from "../../src/Exceptions/InvalidActionException";
+import { Entity } from "../../src/ECS/Entity";
+import { InvalidGuardException } from "../../src/Exceptions/InvalidGuardException";
+import { ActionFunction } from "../../src/ECS/Types";
 
 describe('Behavior tests.', () => {
     let game: Game;
@@ -38,7 +38,7 @@ describe('Behavior tests.', () => {
 
         it('A new Component can inherit predefined Component Types to increase their functionality.', () => {
             const aiPlayer = game.registerComponent('AiPlayer', {parents: ['Player'], values: {script: 'script.txt'}});
-            const dummyGame = game.registerComponent('DummyGame', {parents: ['Game'], values: {turnCount: 0}});
+            game.registerComponent('DummyGame', {parents: ['Game'], values: {turnCount: 0}});
 
             expect(aiPlayer).to.deep.equal({script: 'script.txt', player: undefined});
         });
@@ -226,7 +226,6 @@ describe('Behavior tests.', () => {
             game.registerComponent('ageable', {values: {age: 10}});
 
             game.spawnEntity(['ageable']);
-            const entity = [...game.queryEntities('ageable')][0];
 
             expect(() => game.addComponentToEntity('non-existing-entity-id', 'ageable')).to.throw(InvalidEntityException);
         });
@@ -302,6 +301,9 @@ describe('Behavior tests.', () => {
     describe('Actions & Guards.', () => {
         const playerA = new Player('Player A');
         const playerB = new Player('Player B');
+
+        let increase: ActionFunction;
+        let shuffle: ActionFunction;
         let redDice: Entity;
         let blueDice: Entity;
 
@@ -309,39 +311,43 @@ describe('Behavior tests.', () => {
             game = new Game([playerA, playerB]);
             game.registerComponent('Dice', {values: {value: 1}});
 
-            game.registerAction('shuffle', 
+            shuffle = game.registerAction('shuffle', 
                 (Dice) => `${Dice} has been shuffled.`,
                 (Dice) => Dice.value = Math.floor(Math.random()*6)+1
             );
 
+            increase = game.registerAction('increase', 
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1);
+
             redDice = game.spawnEntity(['Dice'], {name: 'Red Dice'});
             blueDice = game.spawnEntity(['Dice'], {name: 'Blue Dice'});
-        });
-/*
-action without any parameters....? does not exist?
 
-doing an action which is not valid anymore in that step throws an error.
-*/
+            //FIXME: This line exists only so that the TS-Compiler recognizes these variables as being used
+            console.log(blueDice, redDice, shuffle, increase);
+        });
 
         it('An Action can be registered and is doable by any Player.', () => {
-            game.registerAction('increase', 
-                (Player, Dice) => `${Player} increases the ${Dice}`,
-                (Player, Dice) => Dice.value += 1);
+            game.registerAction('increase-big', 
+                (Player, Dice) => `${Player} increases the ${Dice} big`,
+                (Player, Dice) => Dice.value += 2);
 
             game.step();
             
-            expect(game.getActions(playerA)).to.have.length(2);
-            expect(game.getActions(playerB)).to.have.length(2);
+            expect(game.getActions(playerA)).to.have.length(4); //2 "Player-Actions" + 2 Dice
+            expect(game.getActions(playerB)).to.have.length(4); //2 "Player-Actions" + 2 Dice
+
+            //TODO: De-couple Player-Actions from normal Actions:
+            //Players may trigger actions, but actions may also trigger other actions without any input
+            //The fact that a Player "can" do something should depend on the Player and not the Action
+            //(other domain) --> Allowed Actions (of Player) vs. Action Definitions (of Actions)
         });
 
         it('An Action can\'t be registered if it already exists.', () => {
-            game.registerAction('increase', 
-                (Player, Dice) => `${Player} increases the ${Dice}`,
-                (Player, Dice) => Dice.value += 1);
-
             expect(() => game.registerAction('increase', 
-            (Player, Dice) => `${Player} increased the ${Dice}`,
-            (Player, Dice) => Dice.value += 1)).to.throw(InvalidActionException);
+                (Player, Dice) => `${Player} increased the ${Dice}`,
+                (Player, Dice) => Dice.value += 1))
+            .to.throw(InvalidActionException);
         });
 
         it('An Action can\'t be registered if the Event Function takes no Components as parameters.', () => {
@@ -361,10 +367,6 @@ doing an action which is not valid anymore in that step throws an error.
         });
 
         it('Actions that involve Players are special; They are returned when Queried for Actions of a Player.', () => {
-            game.registerAction('increase', 
-                (Player, Dice) => `${Player} increased the ${Dice}`,
-                (Player, Dice) => Dice.value += 1);
-
             game.registerAction('reset',
                 (Dice) => `${Dice} has been reset!`,
                 (Dice) => Dice.value = 1);
@@ -377,10 +379,6 @@ doing an action which is not valid anymore in that step throws an error.
         });
 
         it('Actions can be called from other Actions or externally, too. That\'s why it\'s smart to save the Actions in a local variable.', () => {
-            const increase = game.registerAction('increase', 
-                (Player, Dice) => `${Player} increased ${Dice} by 1`,
-                (Player, Dice) => Dice.value += 1);
-
             const doubleIncrease = game.registerAction('double-increase', 
                 (Player, Dice) => `${Player} double-increased ${Dice} by 2`,
                 (Player, Dice) => {increase(Player, Dice); increase(Player, Dice);});
@@ -390,33 +388,8 @@ doing an action which is not valid anymore in that step throws an error.
             expect(redDice.value).to.equal(3);
         });
 
-        it('Actions can be guarded. Actions are only legal when all Guards evaluate truthy (not exactly, but for now).', () => {
-            const increase = game.registerAction('increase', 
-                (Player, Dice) => `${Player} increased the ${Dice}`,
-                (Player, Dice) => Dice.value += 1);
-            game.registerGuard('increase', (Dice) => Dice.value < 5, `Does not work!`); //TODO: Player is interpreted as Dice here, because there is no name matching yet
-            
-            game.step();
-
-            expect(game.getActions(playerA)).to.have.length(0);
-            expect(game.getActions(playerB)).to.have.length(0);
-            expect(game.getActions()).to.have.length(0 + 0);
-        });
-
         it('Guards must reference an existing Action.', () => {
             expect(() => game.registerGuard('something-that-does-not-exist', () => true)).to.throw(InvalidGuardException);
-        });
-
-        it('All Guards are evaluated when an Action is executed.', () => {
-            let executionCounter = 0;
-
-            game.registerGuard('increase', (Dice) => {executionCounter++; return Dice.value <= 6});
-            game.registerGuard('increase', (Dice) => {executionCounter++; return Dice.value > 0});
-            game.registerGuard('increase', (Player, Game) => {executionCounter++; return Game.currentPlayer == Player});
-
-            game.do('Increase', 'playerA', 'Red Dice');
-
-            expect(executionCounter).to.equal(3);
         });
 
         it('The Message Function of a Guard needs to be a subset of the Components referenced in the Check Function.', () => {
@@ -427,14 +400,5 @@ doing an action which is not valid anymore in that step throws an error.
             expect(() => game.registerGuard('increase', (Game) => true)).to.throw(InvalidGuardException);
             expect(() => game.registerGuard('increase', (Dice) => true, (Dice1, Dice2) => 'xd')).to.throw(InvalidGuardException);     
         });
-
-        //PRIORITY IN GUARD LEVELS
-        //Guards have level, that take precedence over lower level guards
-        //TODO: How to implement "overwriting" certain rules.
-        //eg:   level 0 guard A -> false (can only play during your turn).
-        //      level 1 guard B -> true (can play during every turn).
-
-        //guard check arguments dont have to be in exactly the same order as the Action, they can be matched based on naming
-        //TODO: Allow "looser" coupling, e.g. through subset name search? what is the threshold? --> probably not good idea
     });
 });

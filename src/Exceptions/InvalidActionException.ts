@@ -1,4 +1,4 @@
-import { ActionID } from "./Types";
+import { ActionID } from "../ECS/Types";
 
 export class InvalidActionException extends Error {
     constructor(message: string) {
