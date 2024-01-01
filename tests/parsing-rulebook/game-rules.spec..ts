@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { GameRule } from "../../src/GameRule";
-import { RulebookLoaderFactory } from "../../src/RulebookLoaderFactory";
+import { GameRule } from "../../src/Rulebook/GameRule";
+import { RulebookLoaderFactory } from "../../src/Rulebook/RulebookLoaderFactory";
 import { InvalidRulebookException } from "../../src/Exceptions/InvalidRulebookException";
 
 describe('Parsing Tests. Convert a Rulebook into a Set of Game Rules.', () => {

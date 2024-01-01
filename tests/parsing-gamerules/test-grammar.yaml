@@ -1,0 +1,6 @@
+# 'The Board consists out of a 3x3 Field.',
+# 'Players take turns.',
+Consists:
+  - <<A@Component>> consists out of <<B@Component>>
+Take:
+  - <<Player>> take turns.

@@ -93,3 +93,26 @@ export const getAllCombinations = <K,V> (map: Map<K, Set<V>>): [K, V][] => {
 export const getFunctionParameters = (event: Function | ((args: any[]) => any)): string[] => {
     return (event.toString().split('=>')[0]).match(/[a-z0-9_]+/gi)! || [];
 };
+
+export const findDuplicates = <T>(arr: T[]): T[] => {
+    const set = new Set<T>();
+    const duplicates: T[] = [];
+  
+    arr.forEach((item) => {
+        if (set.has(item)) {
+            duplicates.push(item);
+        } else {
+            set.add(item);
+        }
+    });
+  
+    return duplicates;
+};
+
+export const cleanYamlString = (yaml: string): string => {
+    return yaml.replace(new RegExp('^\\s+(?=\\S)', 'gm'), '');
+};
+
+export const escapeRegex = (string: string): string => {
+    return string.replace(/[.*+?^${}()|\[\]\\]/g, '\\$&');
+};

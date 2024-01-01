@@ -1,4 +1,4 @@
-import { InvalidRulebookException } from "./Exceptions/InvalidRulebookException";
+import { InvalidRulebookException } from "../Exceptions/InvalidRulebookException";
 import { GameRule } from "./GameRule";
 
 export class RulebookLoader {

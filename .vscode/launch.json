@@ -9,7 +9,7 @@
         "args": [
           "--require",
           "ts-node/register",
-          "${workspaceFolder}/tests/*.spec.ts",
+          "${workspaceFolder}/tests/**/*.spec.ts",
         ],
         "runtimeArgs": ["--nolazy"],
         "sourceMaps": true,
