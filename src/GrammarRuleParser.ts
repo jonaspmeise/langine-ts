@@ -5,6 +5,7 @@ import { GrammarSyntaxTree } from "./GrammarSyntaxTree";
 import { GameRule } from "./Rulebook/GameRule";
 
 export class GrammarRuleParser {
+    private NATIVE_RULE_CONST: string = 'NATIVE';
     private rules: Map<string, GrammarRuleImplementation[]> = new Map();
 
     constructor(
@@ -19,8 +20,20 @@ export class GrammarRuleParser {
         this.staticallyCheckMap();
     }
 
+    /*
+        Checks, whether defined reference rules are 
+    */
     private staticallyCheckMap = (): void => {
+        this.rules.forEach((ruleImplementations) => {
+            ruleImplementations.forEach((ruleImplementation) => {
+                ruleImplementation.keyReferences.forEach((keyReference) => {
+                    //TODO: Native rules? how to implement them? How to map general stuff as Component, Player, etc.. into these rules?
+                    if(keyReference == this.NATIVE_RULE_CONST) return;
 
+                    if(!this.rules.has(keyReference)) throw InvalidGrammarException.nonExistingIdentifier(keyReference, this.rules.keys());
+                });
+            });
+        });
     };
 
     public getRule = (name: string | GrammarRuleName): GrammarRuleImplementation[] => {

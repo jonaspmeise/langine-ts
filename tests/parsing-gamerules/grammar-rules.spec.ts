@@ -171,7 +171,37 @@ describe('Parsing GameRules.', () => {
     });
 
     it('Every Rule that is being referenced has to exist within the Grammar Rules.', () => {
-        
+        expect(() => GrammarRuleParserFactory.ofRaw(cleanYamlString(`
+            Rule1:
+                - <<Rule2>>
+                - Some other Tokens, blablabla...
+            Rule2:
+                - "<<Rule1>>: <<Rule2>>"
+                - hehe
+            Rule3:
+                - "<<Rule2>>: <<NonExistingRule>>"
+        `))).to.throw(InvalidGrammarException);
+    });
+
+    it('All References within a single Rule Implementation need to have a unique Identifier.', () => {
+        expect(() => GrammarRuleParserFactory.ofRaw(cleanYamlString(`
+            Rule1:
+                - <<Rule2>> <<Rule2>>
+            Rule2:
+                - hehe
+        `))).to.throw(InvalidGrammarException);
+    });
+
+    it('Rule Implementations can escape yaml-specific tokens (e.g. ":") by quoting the entire Rule Implementation. These Quotes are ignored.', () => {
+        const grammarRuleParser = GrammarRuleParserFactory.ofRaw(cleanYamlString(`
+            Rule1:
+                - "<<Rule1>> abc"
+            Rule2:
+                - <<Rule1>> abc
+        `));
+
+        expect(grammarRuleParser.getRules()).has.length(2);
+        expect(grammarRuleParser.getRule('Rule1')).to.deep.equal(grammarRuleParser.getRule('Rule2'));
     });
 
     it('An initial Grammar Rule can be given as an "entrypoint" to start the parsing from there. That Grammar Rule has to exist.', () => {
@@ -187,6 +217,10 @@ describe('Parsing GameRules.', () => {
     });
 
     it('If there is a circular Grammar Rule reference that does not consume any Tokens during it, throw an Error.', () => {
+
+    });
+
+    it('Users can provide custom parsing schemas.', () => {
 
     });
 

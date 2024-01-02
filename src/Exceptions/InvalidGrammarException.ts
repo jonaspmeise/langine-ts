@@ -42,4 +42,24 @@ export class InvalidGrammarException extends Error {
         
         Consider to change the Rule Implementation to consume other Tokens, so that the Rule is being "reduced" with each feedback call.`);
     };
+
+    public static duplicateReferenceKey = (referenceKey: string, rule: string): InvalidGrammarException => {
+        return new InvalidGrammarException(`The Rule "${rule}" contains a duplicate Key reference: ${referenceKey}.
+        
+        Consider renaming the reference "${referenceKey}", so that each reference has a unique Name in that Rule Implementation.
+        The syntax for that is:
+        
+        [CUSTOM_NAME]@[RULE_IDENTIFIER]
+        
+        e.g.
+        
+        Receiver@Component`);
+    };
+
+    public static nonExistingIdentifier = (referenceKey: string, existingRuleNames: IterableIterator<String>): InvalidGrammarException => {
+        return new InvalidGrammarException(`The Rule Reference Key "${referenceKey}" does not exist!
+        These following Grammar Rules only exist:
+        
+        ${[...existingRuleNames].join('\n\t')}`);
+    };
 }

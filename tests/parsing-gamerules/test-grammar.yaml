@@ -4,3 +4,7 @@ Consists:
   - <<A@Component>> consists out of <<B@Component>>
 Take:
   - <<Player>> take turns.
+Component:
+  - <<NATIVE>>
+Player:
+  - <<NATIVE>>
