@@ -29,8 +29,8 @@ export class InvalidGrammarException extends Error {
         Each Grammar Rule Implementation should be unique within its own Rule.`)
     };
 
-    public static invalidNamedReference = (namedReference: string): InvalidGrammarException => {
-        return new InvalidGrammarException(`The named Reference "${namedReference}" has an invalid Syntax:
+    public static invalidNamedReference = (rule: string, namedReference: string): InvalidGrammarException => {
+        return new InvalidGrammarException(`The named Reference "${namedReference}" in the Rule "${rule}" has an invalid Syntax:
         
         The name should have a format of [NAME]@[RULENAME], e.g. Receiver@Component.`);
     };
@@ -62,4 +62,15 @@ export class InvalidGrammarException extends Error {
         
         ${[...existingRuleNames].join('\n\t')}`);
     };
+
+    public static invalidRuleName = (ruleName: string): InvalidGrammarException => {
+        return new InvalidGrammarException(`The Rule "${ruleName}" has an invalid Name:
+        
+        It may only contain alphabetical, numerical, and "_" characters!
+        `)
+    };
+
+    public static fileError = (filepath: string): InvalidGrammarException => {
+        return new InvalidGrammarException(`An error occured when trying to open the file "${filepath}"!`);
+    }
 }

@@ -1,6 +1,5 @@
 export class GameRule {
-    // @ts-ignore //TODO: This should disappear some point...
-    private rule: string;
+    public readonly rule: string;
 
     constructor(rule: string) {
         //Sanitize rule
