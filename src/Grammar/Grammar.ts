@@ -26,7 +26,7 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
         [...map.entries()].forEach(([name, implementations]) => {
             this.set(
                 new GrammarRuleName(name, this.options.logger),
-                implementations.map((implementation) => new GrammarRuleDefinition(implementation, name, options)));
+                implementations.map((implementation) => new GrammarRuleDefinition(implementation, name, options, this.options.caseSensitive)));
         });
 
         this.staticallyCheckMap();
@@ -36,9 +36,9 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
         Checks, whether all defined Rule References even exist.
     */
     private staticallyCheckMap = (): void => {
-        this.forEach((ruleImplementations) => {
-            ruleImplementations.forEach((ruleImplementation) => {
-                ruleImplementation.keyReferences.forEach((keyReference) => {
+        this.forEach((ruleDefinitions) => {
+            ruleDefinitions.forEach((ruleDefinition) => {
+                ruleDefinition.keyReferences.forEach((keyReference) => {
                     //TODO: Native rules? how to implement them? How to map general stuff as Component, Player, etc.. into these rules?
                     if(!this.has(keyReference)) throw InvalidGrammarException.nonExistingIdentifier(keyReference, this.keys());
                 });
@@ -46,10 +46,10 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
         });
     };
 
-    public override set = (name: string | GrammarRuleName, ruleImplementations: GrammarRuleDefinition[]): this => { 
+    public override set = (name: string | GrammarRuleName, ruleDefinitions: GrammarRuleDefinition[]): this => { 
         const grammarRule = (name instanceof GrammarRuleName) ? name : new GrammarRuleName(name, this.options.logger);
         
-        super.set(grammarRule.name, ruleImplementations);
+        super.set(grammarRule.name, ruleDefinitions);
         return this;
     };
 
@@ -80,11 +80,8 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
         return syntaxTree;
     };
 
-    public parseRules = (rulebook: Rulebook): GrammarSyntaxTree[] => {
-        const gsts = rulebook.map((rule) => {
-            const rules = this.parseRule(rule)
-            return rules;
-        });
+    public parseRules = (rulebook: Rulebook, initialRule?: string): GrammarSyntaxTree[] => {
+        const gsts = rulebook.map((rule) => this.parseRule(rule, initialRule));
 
         //Analyze, which Rules and which Definitions we did not parse;
         this.analyzeUsage();
@@ -113,6 +110,7 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
     };
     
     private recParseRule = (rule: string, initialRule?: string, initialRuleName?: string, stack: StackEntry[] = []): GrammarSyntaxTree | null => {
+        this.options.logger.debug(`Try to parse "${rule}" against ${initialRule}`);
         const possibleSyntaxTrees: GrammarSyntaxTree[] = [];
         
         let rulesToQuery: [string, GrammarRuleDefinition[]][] = [...this.entries()];
@@ -123,48 +121,69 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
             rulesToQuery = [[initialRule, this.get(initialRule)]];
         }
 
-        rulesToQuery.forEach(([ruleName, ruleImplementations]) => {
+        rulesToQuery.find(([ruleName, ruleDefinitions]) => {
             //Check for infinite self-reference loop by checking whether we already tried to parse this entry before in this path.
             const currentVisitation: StackEntry = {rule: ruleName, text: rule};
 
             if(stack.find((entry) => entry.rule === currentVisitation.rule && entry.text === currentVisitation.text)) throw ParsingException.infiniteSelfReference(currentVisitation, stack);
 
-            ruleImplementations.forEach((ruleImplementation) => {
-                //check, whether the rule implementation holds
-                const match = ruleImplementation.queryRegex.exec(rule);
+            const foundRule = ruleDefinitions.find((ruleDefinition) => {
+                const foundDefinition = ruleDefinition.regexQueries.find((regex) => {
+                    //check, whether the Rule Definition holds
+                    const match = regex.exec(rule);
+                    if(match === null) return false;
 
-                if(match) {
+                    this.options.logger.debug(`Found possible match of "${rule}" with "${regex}"...`);
+
                     //resolve potential references that the rule holds
-                    if(ruleImplementation.keyReferences.size > 0) {
+                    if(ruleDefinition.keyReferences.size > 0) {
                         //resolve each reference individually, recursively
-                        const resolvedSubtrees = [...ruleImplementation.keyReferences.entries()].map(([referenceName, referenceType]) => {
+                        let foundSubtree: GrammarSyntaxTree | null = null;
+
+                        [...ruleDefinition.keyReferences.entries()].find(([referenceName, referenceType]) => {
                             const subTextToParse = match.groups![referenceName];
                             const possibleSubTree = this.recParseRule(subTextToParse, referenceType, referenceName, [...stack, currentVisitation]);
                             
-                            return possibleSubTree;
+                            //Save the SyntaxTree and quit search
+                            if(possibleSubTree !== null) {
+                                foundSubtree = possibleSubTree;
+                                return true;
+                            }
+
+                            return false;
                         });
 
-                        if(!resolvedSubtrees.every((subtree) => subtree !== null)) return;
+                        //No Sub-SyntaxTree yielded a Result
+                        if(foundSubtree === null) return false;
 
-                        possibleSyntaxTrees.push({
-                            [initialRuleName ?? ruleName]: (resolvedSubtrees as GrammarSyntaxTree[]).reduce((arr, cur) => {
-                                    return {...arr, ...cur};
-                                }, {})
-                        });
+                        possibleSyntaxTrees.push(foundSubtree);
                     } else {
                         //simply add the consumed token
                         possibleSyntaxTrees.push({[initialRuleName ?? ruleName]: rule});
                     }
                     
-                    //Save information about this Rule Implementation being used successfully to parse a Game Rule
-                    ruleImplementation.setUsed(true);
-                }
+                    //Save information about this Rule Definition being used successfully to parse a Game Rule
+                    ruleDefinition.setUsed(true);
+
+                    //If we found a single match within our possible variations, we thus consider this match to be valid.
+                    this.options.logger.debug(`Found safe match of "${rule}" with "${regex}"!`);
+                    return true;
+                });
+
+                return foundDefinition !== undefined;
             });
+
+            return foundRule !== undefined;
         });
 
         if(possibleSyntaxTrees.length > 1) throw ParsingException.moreThanOneMatch(rule, possibleSyntaxTrees);
 
-        return possibleSyntaxTrees.length == 1 ? possibleSyntaxTrees[0] : null;
+        if(possibleSyntaxTrees.length == 1) {
+            this.options.logger.debug(`Found correct subtree for "${rule}"!`);
+            return possibleSyntaxTrees[0];
+        } 
+
+        return null;
     };
 
     public static ofFile = (filepath: string, options?: Partial<GrammarOptions>): Grammar => {
@@ -182,18 +201,22 @@ export class Grammar extends Map<string, GrammarRuleDefinition[]>{
             
             //Validate that the read file is a "flat" yaml:
             //Top-level only contains Grammar Rule Names
-            //and each Name contains an array of Rule Implementations (strings)
+            //and each Name contains an array of Rule Definitions (strings)
             Object.entries(yamlDocument).forEach(([name, implementations]) => {
                 if(!Array.isArray(implementations)) throw InvalidGrammarException.ruleHasNoChildArray(name);
 
-                if(implementations.some((implementation) => typeof implementation != 'string')) throw InvalidGrammarException.implementationIsNotString(implementations);
+                //Check for possible Objects (or other, non-sensical values)
+                if(implementations.some((implementation) => typeof implementation != 'string' && typeof implementation != 'number')) throw InvalidGrammarException.implementationIsNotStringOrNumber(implementations);
                 
-                //Check for duplicate Rule Implementations
-                const duplicateRules = findDuplicates(implementations as string[]); 
+                //Numbers unfortunately need to be converted into strings
+                const convertedImplementations = implementations.map((implementation) => implementation.toString());
+
+                //Check for duplicate Rule Definitions
+                const duplicateRules = findDuplicates(convertedImplementations); 
                 if(duplicateRules.length > 0) throw InvalidGrammarException.duplicateRule(name, duplicateRules);
 
                 //LOG: if(map.get(name)) console.log(`The Rule "${name}" is being overwritten!`);
-                map.set(name, implementations);
+                map.set(name, convertedImplementations);
             });
         });
 

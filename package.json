@@ -2,8 +2,8 @@
   "name": "langine",
   "version": "1.0.0",
   "description": "Language Engine for Creating, Hosting and Playing Games",
-  "main": "index.js",
-  "scripts": {
+    "main": "index.js",
+    "scripts": {
     "tests-compile": "tsc --project tsconfig.json",
     "tests-reporter": "nyc --reporter=html mocha --exit ./dist/tests/**/*.spec.js ./dist/src/**/*.spec.js",
     "tests-run": "npm run tests-compile && npm run tests-reporter",

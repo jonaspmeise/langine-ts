@@ -116,3 +116,35 @@ export const cleanYamlString = (yaml: string): string => {
 export const escapeRegex = (string: string): string => {
     return string.replace(/[.*+?^${}()|\[\]\\]/g, '\\$&');
 };
+
+export const generateCombinations = <T> (tokens: T[], repeat: number): T[][] => {
+    const product = <T> (array: T[], repeat: number): T[][] => {
+        if (repeat === 0) return [[]];
+
+        const result: T[][] = [];
+        const rest = product(array, repeat - 1);
+
+        array.forEach((item) => rest.forEach((combination) => result.push([item, ...combination])))
+
+        return result;
+    };
+
+    return product(tokens, repeat);
+};
+
+export const interweave = (parts: string[], connectors: string[]): string => {
+    if (connectors.length !== parts.length - 1) {
+        throw new Error('Invalid input arrays');
+    }
+
+    const result: string[] = [];
+    for (let i = 0; i < parts.length; i++) {
+        result.push(parts[i]);
+
+        if (i < connectors.length) {
+            result.push(connectors[i]);
+        }
+    }
+
+    return result.join('');
+};

@@ -1,10 +1,10 @@
 import { InvalidGrammarException } from "../Exceptions/InvalidGrammarException";
-import { escapeRegex } from "../Util";
+import { escapeRegex, generateCombinations, interweave } from "../Util";
 import { GrammarOptions, injectWithDefaultValues } from "./GrammarTypes";
 
 export class GrammarRuleDefinition {
     //The Query to execute when trying to check whether a given Game Rule matches this Rule.
-    public readonly queryRegex: RegExp;
+    public readonly regexQueries: RegExp[] = [];
 
     //Holds information about whether this Grammar Rule was used when parsing a Game Rule.
     private used: boolean = false;
@@ -19,8 +19,9 @@ export class GrammarRuleDefinition {
     //If no name is provided, the name of the Rule is taken as an identifier.
     public readonly keyReferences: Map<string, string> = new Map(); 
 
-    constructor(public readonly rule: string, parentRuleName?: string, customOptions?: Partial<GrammarOptions>) {
+    constructor(public readonly rule: string, parentRuleName?: string, customOptions?: Partial<GrammarOptions>, caseSensitive: boolean = false) {
         const options = injectWithDefaultValues(customOptions);
+        const regexFlags = caseSensitive ? '' : 'i';
 
         //tokens which have special meaning in RegEx (such as '.', '\' etc...)
         //should not be interpreted as RegEx tokens
@@ -54,7 +55,37 @@ export class GrammarRuleDefinition {
             searchRule = searchRule.replace(options.referenceExtractor.reconstruct(reference), `(?<${referenceName}>.+)`);
         });
 
-        this.queryRegex = new RegExp(`^${searchRule}$`);
+        const baseRegex = new RegExp(`^${searchRule}$`, regexFlags);
+
+        //Construct possible Variations of the RegExp, because sometimes
+        //A single Token with a whitespace should match a single rule.
+        //E.g., "The green Game Board" should match the Rule <<Identifier>> <<Component>>
+        //In natural Language, it's obvious that:
+        //  Identifier -> "The green"
+        //  Component -> "Game Board"
+        //But normally, the normal regex would only consider matching this:
+        //  Identifier -> "The green Game"
+        //  Component -> "Board"
+        //To prevent this, we vary the greedy/lazy quantifier of each Reference's selector and create variations from our Regex
+        if(this.keyReferences.size >= 2) {
+            this.regexQueries.push(...GrammarRuleDefinition.createRegexVariations(baseRegex));
+        } else {
+            this.regexQueries.push(baseRegex);
+        }
+    };
+
+    public static createRegexVariations = (regex: RegExp): RegExp[] => {
+        const parts = regex.source.split(new RegExp(`\\.\\+`));
+
+        //FIXME: We currently support up to 3 tokens, divided by space, per Reference in a pure-Reference rule.
+        //E.g., the Rule "Green and red Game Board" is tried with all possible variations against:
+        //  Sentence -> <<Identifier>> <<Component>>
+        //since there are a total of 5 Tokens, and up to 3-token-combinations are evaluated as groups.
+        //The correct groups in the above example being Identifier -> "Green and red", Component -> "Game Board"
+        const quantificationTokenCombinations = generateCombinations(['.+', '.+\\s.+', '.+\\s.+\\s.+'], parts.length - 1);
+
+        //add all interweaved combinations to 
+        return quantificationTokenCombinations.map((combination) => new RegExp(interweave(parts, combination), regex.flags));
     }
 
     setUsed(used: boolean): void {

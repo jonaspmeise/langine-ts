@@ -8,14 +8,47 @@ describe('Grammar Rule Definition.', () => {
         const rule2 = new GrammarRuleDefinition('Test something!');
         const rule3 = new GrammarRuleDefinition('<<abc@Part>> does something with <<def@Part>>');
 
-        expect(rule1.queryRegex).to.deep.equal(new RegExp(`^(?<Part1>.+) does something with (?<Part2>.+)$`));
-        expect(rule2.queryRegex).to.deep.equal(new RegExp(`^Test something!$`));
-        expect(rule3.queryRegex).to.deep.equal(new RegExp(`^(?<abc>.+) does something with (?<def>.+)$`));
+        //The Flag 'i' is set because by default, the parsing is done case-insensitively
+        expect(new Set(rule1.regexQueries)).to.deep.equal(new Set([
+            new RegExp(`^(?<Part1>.+?) does something with (?<Part2>.+?)$`, 'i'),
+            new RegExp(`^(?<Part1>.+?) does something with (?<Part2>.+)$`, 'i'),
+            new RegExp(`^(?<Part1>.+) does something with (?<Part2>.+?)$`, 'i'),
+            new RegExp(`^(?<Part1>.+) does something with (?<Part2>.+)$`, 'i')
+        ]));
+
+        expect(new Set(rule2.regexQueries)).to.deep.equal(new Set([
+            new RegExp(`^Test something!$`, 'i')
+        ]));   
+        
+        expect(new Set(rule3.regexQueries)).to.deep.equal(new Set([
+            new RegExp(`^(?<abc>.+?) does something with (?<def>.+?)$`, 'i'),
+            new RegExp(`^(?<abc>.+?) does something with (?<def>.+)$`, 'i'),
+            new RegExp(`^(?<abc>.+) does something with (?<def>.+?)$`, 'i'),
+            new RegExp(`^(?<abc>.+) does something with (?<def>.+)$`, 'i')
+        ]));
     });
     
     it('A named Reference has to have a correct format.', () => {
         expect(() => new GrammarRuleDefinition('<<Holder@Component@Component>> has something')).to.throw(InvalidGrammarException);
 
         expect(() => new GrammarRuleDefinition('<<@Component>> exists')).to.throw(InvalidGrammarException);
+    });
+
+    it('Creating RegExp-Variations works correctly.', () => {
+        const regex = new RegExp('^(?<Part1>.+) does something with (?<Part2>.+) to cause (?<Part3>.+)$', 'i');
+
+        const variations = GrammarRuleDefinition.createRegexVariations(regex);
+
+        expect(variations).to.have.length(8); //3 references, 2**3 == 8
+        expect(new Set(variations)).to.deep.equal(new Set([
+            new RegExp('^(?<Part1>.+?) does something with (?<Part2>.+?) to cause (?<Part3>.+?)$', 'i'),
+            new RegExp('^(?<Part1>.+?) does something with (?<Part2>.+?) to cause (?<Part3>.+)$', 'i'),
+            new RegExp('^(?<Part1>.+?) does something with (?<Part2>.+) to cause (?<Part3>.+?)$', 'i'),
+            new RegExp('^(?<Part1>.+?) does something with (?<Part2>.+) to cause (?<Part3>.+)$', 'i'),
+            new RegExp('^(?<Part1>.+) does something with (?<Part2>.+?) to cause (?<Part3>.+?)$', 'i'),
+            new RegExp('^(?<Part1>.+) does something with (?<Part2>.+?) to cause (?<Part3>.+)$', 'i'),
+            new RegExp('^(?<Part1>.+) does something with (?<Part2>.+) to cause (?<Part3>.+?)$', 'i'),
+            new RegExp('^(?<Part1>.+) does something with (?<Part2>.+) to cause (?<Part3>.+)$', 'i')
+        ]));
     });
 });

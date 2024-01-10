@@ -232,4 +232,75 @@ describe('Parsing Examples.', () => {
 
         expect(() => grammar.parseRule('something something')).to.throw(ParsingException);
     });
+
+    it('By default, Game Rules are parsed case-insensitively.', () => {
+        const grammar = Grammar.ofRaw(cleanYamlString(`
+            Object1:
+                - test
+        `));
+
+        expect(grammar.parseRule('test')).to.deep.equal({Object1: 'test'});
+        expect(grammar.parseRule('Test')).to.deep.equal({Object1: 'Test'});
+    });
+
+    it('But, Game Rules can be parsed case-sensitive, too.', () => {
+        const grammar = Grammar.ofRaw(cleanYamlString(`
+            Object1:
+                - test
+        `), {caseSensitive: true});
+        
+        expect(grammar.parseRule('test')).to.deep.equal({Object1: 'test'});
+        expect(() => grammar.parseRule('Test')).to.throw(ParsingException);
+    });
+
+    //TODO:     Don't allow multi-tokens (with spaces) to be parsed throughout when a rule like <<rule1>> <<rule2>> would consume them?
+    //Problem:  The Game Board -> <<rule1>> <<rule2>>, how to implement these options?
+    //Idea:     Iterate through all references and mark them strategically as .+?, and then query through all cartesian variations.
+
+    it('Multi-Token References are evaluated correctly.', () => {
+        const grammar = Grammar.ofRaw(cleanYamlString(`
+            Object1:
+                - <<Identifier>> <<Component>>
+            Component:
+                - Game Board
+                - <<Color>> <<Dice>>
+            Dice:
+                - Dice
+            Identifier:
+                - The
+                - <<a@Identifier>> <<b@Identifier>>
+                - <<Color>>
+            Color:
+                - green
+        `), {caseSensitive: true});
+
+        expect(grammar.parseRule('The Game Board')).to.deep.equal({
+            Object1: {
+                Identifier: 'The',
+                Component: 'Game Board'
+            }
+        });
+
+        expect(grammar.parseRule('The green Game Board')).to.deep.equal({
+            Object1: {
+                Identifier: {
+                    a: 'The',
+                    b: {
+                        Color: 'green'
+                    }
+                },
+                Component: 'Game Board'
+            }
+        });
+
+        expect(grammar.parseRule('The green Dice')).to.deep.equal({
+            Object1: {
+                Identifier: 'The',
+                Component: {
+                    Color: 'green',
+                    Dice: 'Dice'
+                }
+            }
+        });
+    })
 });

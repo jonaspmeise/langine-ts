@@ -1,0 +1,61 @@
+MetaRule:
+  - <<MetaRule>>.
+  - <<Rule>>
+  - <<Rule1@MetaRule>> <<Rule2@MetaRule>>
+Rule:
+  - <<Consists>>
+  - <<Uses>>
+Addendrum:
+  - either X or O.
+Consists:
+  - <<Main@Component>> <<ConsistsTokens>> <<Parts@Component>>
+ConsistsTokens:
+  - consists ouf of
+Uses:
+  - <<User@Player>> uses <<Object@Component>>
+  - <<Uses>>, <<Addendrum>>
+Selector:
+  - <<Identifier>>
+  - <<Identifier>> <<Selector>>
+Identifier:
+  - <<Singular_Identifier>>
+  - <<Multiple_Identifier>>
+  - <<Distinct_Identifier>>
+Singular_Identifier:
+  - the
+  - a
+Distinct_Identifier:
+  - distinct
+Multiple_Identifier:
+  - each
+Component:
+  - <<Component_Definition>>
+  - <<Selector>> <<Component_Definition>>
+Component_Definition:
+  - <<GameBoard>>
+  - <<Grid>>
+  - <<Marker>>
+GameBoard:
+  - game board
+Grid:
+  - <<Size>> grid
+Marker:
+  - marker
+Player:
+  - player
+Size:
+  - <<a@Number>><<SizeGiver>><<b@Number>>
+SizeGiver:
+  - x
+  - times
+Number:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 0

@@ -17,9 +17,9 @@ describe('Grammar.', () => {
     Each Grammar Rule has an identifier and 1+ multiple implementations, given in an array.
 
     Grammar Rule:
-        - Rule Implementation #1
-        - Rule Implementation #2
-        - Rule Impleemntation #3
+        - Rule Definition #1
+        - Rule Definition #2
+        - Rule Definition #3
         - ....
 
     E.G. 
@@ -119,7 +119,7 @@ describe('Grammar.', () => {
             expect(rule1).to.deep.equal([new GrammarRuleDefinition('Implementation Nr.1')]);
         });
         
-        it('The Grammar Rules are only allowed to have a top level (Name) and string-Arrays beneath it (Rule Implementations).', () => {
+        it('The Grammar Rules are only allowed to have a top level (Name) and string-Arrays beneath it (Rule Definitions).', () => {
             expect(() => Grammar.ofRaw(cleanYamlString(`
                 Rule1:
                     IllegalRule:
@@ -130,7 +130,7 @@ describe('Grammar.', () => {
             `))).to.throw(InvalidGrammarException);
         });
 
-        it('There should be no duplicate Rule Implementations within a single Grammar Rule.', () => {
+        it('There should be no duplicate Rule Definitions within a single Grammar Rule.', () => {
             expect(() => Grammar.ofRaw(cleanYamlString(`
                 Rule1:
                     - Implementation Nr. 1
@@ -181,7 +181,7 @@ describe('Grammar.', () => {
             `))).to.throw(InvalidGrammarException);
         });
 
-        it('All References within a single Rule Implementation need to have a unique Identifier.', () => {
+        it('All References within a single Rule Definition need to have a unique Identifier.', () => {
             expect(() => Grammar.ofRaw(cleanYamlString(`
                 Rule1:
                     - <<Rule2>> <<Rule2>>
@@ -190,7 +190,7 @@ describe('Grammar.', () => {
             `))).to.throw(InvalidGrammarException);
         });
 
-        it('Rule Implementations can escape yaml-specific tokens (e.g. ":") by quoting the entire Rule Implementation. These Quotes are ignored.', () => {
+        it('Rule Definitions can escape yaml-specific tokens (e.g. ":") by quoting the entire Rule Definition. These Quotes are ignored.', () => {
             const grammar = Grammar.ofRaw(cleanYamlString(`
                 Rule1:
                     - "<<Rule1>> abc"
