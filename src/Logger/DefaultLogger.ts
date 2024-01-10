@@ -11,7 +11,7 @@ export class DefaultLogger implements Logger {
     };
     
     public info = (message: string): void => {
-        console.log(`${chalk.blue('[INFO]')}$ {message}`);
+        console.log(`${chalk.blue('[INFO]')} ${message}`);
     };
     
     public debug = (message: string): void => {

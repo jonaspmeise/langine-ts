@@ -1,3 +1,4 @@
+import { StackEntry } from "../ECS/Types";
 import { GrammarSyntaxTree } from "../Grammar/GrammarSyntaxTree";
 
 export class ParsingException extends Error {
@@ -23,4 +24,14 @@ export class ParsingException extends Error {
         ${possibleGSTs.map((gst) => gst.toString()).join('\n\t')}
         `)
     };
+
+    public static infiniteSelfReference = (currentVisitation: StackEntry, stack: StackEntry[]): ParsingException => {
+        return new ParsingException(`Parsing the provided Grammar Rules results in an infinite self-reference. While trying to parse
+        
+        Grammar Rule "${currentVisitation.rule}": "${currentVisitation.text}".
+
+        That exact node has already been parsed before:
+            ${stack.map((entry) => `${entry.rule} ("${entry.text}")`).join(` ->\n\t`)}
+        `);
+    }
 }

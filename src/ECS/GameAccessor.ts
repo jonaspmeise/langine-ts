@@ -1,10 +1,8 @@
-import { Action } from "./Action";
 import { Component } from "./Component";
 import { Entity } from "./Entity";
 import { Guard } from "./Guard";
 import { Player } from "./Player";
-import { State } from "./State";
-import { ActionID, ComponentID, EntityID, PlainObject, PlayerID, StateID } from "./Types";
+import { ActionID, ComponentID, EntityID, PlainObject, PlayerID } from "./Types";
 
 export interface GameAccessor {
     addComponentToEntity(entity: EntityID | Entity, component: ComponentID | Component, values?: PlainObject): Entity;
@@ -25,7 +23,7 @@ export interface GameAccessor {
     queryEntities(filter: (ComponentID | Component) | (ComponentID | Component)[] | ((...args: any[]) => boolean), returnCombinations: false): Set<Entity>;
     queryEntities(filter: (ComponentID | Component) | (ComponentID | Component)[] | ((...args: any[]) => boolean), returnCombinations: true): Set<Entity[]>;
 
-    registerState(name: StateID): State;
+    //registerState(name: StateID): State;
     registerAction(
             name: ActionID, 
             language: string | ((...words: Entity[]) => string), //can also be type Game
@@ -38,6 +36,6 @@ export interface GameAccessor {
     ): Guard;
 
     step(): void;
-    do(action: Action, ...parameter: EntityID[]): void;
+    //do(action: Action, ...parameter: EntityID[]): void;
     getActions(player?: PlayerID | Player): [ActionID, EntityID[]][];
 }

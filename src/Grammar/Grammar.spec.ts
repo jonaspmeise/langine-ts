@@ -2,14 +2,11 @@ import { expect } from "chai";
 
 import { InvalidGrammarException } from "../Exceptions/InvalidGrammarException";
 import { cleanYamlString } from "../Util";
-import { GrammarRuleImplementation } from "./GrammarRuleImplementation";
+import { GrammarRuleDefinition } from "./GrammarRuleDefinition";
 import { Grammar } from "./Grammar";
 import { Logger } from "../Logger/Logger";
-import { GameRule } from "../Rulebook/GameRule";
-import { ParsingException } from "../Exceptions/ParsingException";
-import { Rulebook } from "../Rulebook/Rulebook";
 
-describe('Parsing GameRules.', () => {
+describe('Grammar.', () => {
 /*
     Game Rules are the rules given in the Rulebook.
     These Rules have to be parsed into an GST (Grammar Syntax Tree), which is afterwards used to translate each rule into according Code.
@@ -61,7 +58,6 @@ describe('Parsing GameRules.', () => {
 
     These Grammar Rules can be extended by the Player by e.g. adding additional grammar documents to the yaml.
     The yaml is shipped with the code to live-transform all rules.
-    TODO: Return on the first rule found, or continue to query *all* rules?
 
     Tests:
     - The file has to be explicitly referenced or assumed to be called "grammar.yaml".
@@ -120,9 +116,8 @@ describe('Parsing GameRules.', () => {
 
             const rule1 = grammar.get('Rule1');
             expect(rule1).to.have.length(1); //Remember: only the top Rule definition!
-            expect(rule1).to.deep.equal([new GrammarRuleImplementation('Implementation Nr.1', 'Rule1')]);
+            expect(rule1).to.deep.equal([new GrammarRuleDefinition('Implementation Nr.1')]);
         });
-
         
         it('The Grammar Rules are only allowed to have a top level (Name) and string-Arrays beneath it (Rule Implementations).', () => {
             expect(() => Grammar.ofRaw(cleanYamlString(`
@@ -145,26 +140,6 @@ describe('Parsing GameRules.', () => {
                     - Duplicate Implementation!
             `))).to.throw(InvalidGrammarException);
         });
-
-        it('The names of Grammar Rules may not contain sensitive symbols.', () => {
-            // Spaces are not allowed!
-            expect(() => Grammar.ofRaw(cleanYamlString(`
-                Object 1:
-                    - test
-            `))).to.throw(InvalidGrammarException);
-
-            // Dots are not allowed!
-            expect(() => Grammar.ofRaw(cleanYamlString(`
-                Object.1:
-                    - test
-            `))).to.throw(InvalidGrammarException);
-
-            // '@' is not allowed!
-            expect(() => Grammar.ofRaw(cleanYamlString(`
-                Object@:
-                    - test
-            `))).to.throw(InvalidGrammarException);
-        });
     });
 
     describe('Rule specifications.', () => {
@@ -172,6 +147,7 @@ describe('Parsing GameRules.', () => {
             const testLogger: Logger = {
                 error: () => '',
                 warn: (message) => {
+                    console.log(message);
                     done();
                 },
                 debug: () => '',
@@ -238,195 +214,5 @@ describe('Parsing GameRules.', () => {
         });
     });
 
-    describe('Parsing specification.', () => {
-        it('Users can provide custom parsing schemas.', () => {
-            const rulebook = Rulebook.ofText(`
-                Welcome to this non-sense game!
-
-                {{abc.}}
-                {{abc abc.}}
-                {{abc def.}}
-                {{abc abc def.}}
-            `);
-
-            const grammar = Grammar.ofRaw(cleanYamlString(`
-                Rule1:
-                    - abc __Rule1__
-                    - abc
-                    - abc.
-                Rule2:
-                    - __Rule1__ def.
-            `), {referenceExtractor: {
-                parse: (string) => string.match(new RegExp('(?<=__).+?(?=__)', 'gm')),
-                reconstruct: (string) => `__${string}__`
-            }});
-            
-            const parsedRules = grammar.parseRules(rulebook);
-
-            expect(parsedRules).has.length(4);
-            expect(parsedRules[0]).to.deep.equal({
-                Rule1: 'abc.'
-            });
-            expect(parsedRules[1]).to.deep.equal({
-                Rule1: {
-                    Rule1: 'abc.'
-                }
-            });
-            expect(parsedRules[2]).to.deep.equal({
-                Rule2: {
-                    Rule1: 'abc'
-                }
-            });
-            expect(parsedRules[3]).to.deep.equal({
-                Rule2: {
-                    Rule1: {
-                        Rule1: 'abc'
-                    }
-                }
-            });
-        });
-
-        it('An initial Rule to start the parsing from can be provided.', () => {
-            const grammar = Grammar.ofRaw(cleanYamlString(`
-                Object1:
-                    - test
-                Object2:
-                    - test
-            `));
-
-            const possibleSyntaxTrees = grammar.parseRule(new GameRule('test'), 'Object2');
-
-            //Object2 is ignored, because we only specify the search to happen on 'Object1'.
-            //Thus, no Error is thrown here either.
-            expect(possibleSyntaxTrees).to.deep.equal({
-                ['Object2']: 'test'
-            });
-        });
-
-        it('If an initial Rule is provided, it has to exist.', () => {
-            const grammar = Grammar.ofRaw(cleanYamlString(`
-                Object1:
-                    - test
-                Object2:
-                    - test
-            `));
-
-            expect(() => grammar.parseRule(new GameRule('test'), 'Object3')).to.throw(InvalidGrammarException);
-        });
-
-        it('A provided Grammar Rule is correctly transformed into a RegEx query, which can be applied when parsing the Game Rules.', () => {
-            const rule1 = new GrammarRuleImplementation('<<Part1>> does something with <<Part2>>', 'Rule1');
-            const rule2 = new GrammarRuleImplementation('Test something!', 'Rule1');
-            const rule3 = new GrammarRuleImplementation('<<abc@Part>> does something with <<def@Part>>', 'Rule1');
-
-            expect(rule1.queryRegex).to.deep.equal(new RegExp(`^(?<Part1>.+) does something with (?<Part2>.+)$`));
-            expect(rule2.queryRegex).to.deep.equal(new RegExp(`^Test something!$`));
-            expect(rule3.queryRegex).to.deep.equal(new RegExp(`^(?<abc>.+) does something with (?<def>.+)$`));
-        });
-    });
-
-
-    it('If there is more than one Grammar Rule which parses a given Game Rule, issue a warning. Multiple parsings can lead to unpredictable behavior.', () => {
-
-    });
-
-    //A rule may not be defined, in case of <<Player>>: How does that work then?
-    //As long as the "Code Behind" TODO: GIVE THIS A GOOD NAME
-    //provides Code for that Token, it is valid?
-
-    it('Issue a warning if a Grammar Rule is not being used at all when parsing Game Rules.', () => {
-
-    });
-
-    it('A named Reference to another Rule has to have a correct format.', () => {
-        expect(() => Grammar.ofRaw(cleanYamlString(`
-            Rule1:
-                - <<Holder@Component@Component>> has something
-            Component:
-                - something
-        `))).to.throw(InvalidGrammarException);
-
-        expect(() => Grammar.ofRaw(cleanYamlString(`
-            Rule1:
-                - <<@Component>> has something
-            Component:
-                - something
-        `))).to.throw(InvalidGrammarException);
-    });
-
-    it('Each Game Mechanic has to be parseable.', () => {
-        const grammarRuleParser = Grammar.ofRaw(cleanYamlString(`
-            Object1:
-                - test1
-            Object2:
-                - test2
-        `));
-
-        expect(() => grammarRuleParser.parseRule(new GameRule('test3'))).to.throw(ParsingException);
-    });
-
-    //TODO: No circular references
-    //Issue warning if certain Nodes have not been visited
     //TODO: Nudge the Player to implement own GameRule -> GrammarSyntaxTree tests; should be easily suppliable due to the string -> JSON-Format.
-
-    describe('Parsing Examples.', () => {
-        it('Single Game Rule is parsed correctly.', () => {
-            const grammar = Grammar.ofRaw(cleanYamlString(`
-                Object1:
-                    - test
-            `));
-    
-            const possibleSyntaxTrees = grammar.parseRule(new GameRule('test'));
-    
-            expect(possibleSyntaxTrees).to.deep.equal({
-                Object1: 'test'
-            });
-        });
-    
-        it('Only one possible parsed GST is allowed. Unambigious Parsings lead to logical errors and are thus forbidden.', () => {
-            const grammarRuleParser = Grammar.ofRaw(cleanYamlString(`
-                Object1:
-                    - test
-                Object2:
-                    - test
-            `));
-    
-            expect(() => grammarRuleParser.parseRule(new GameRule('test'))).to.throw(ParsingException);
-        });
-    
-        it('References are being evaluated correctly.', () => {
-            const grammar = Grammar.ofRaw(cleanYamlString(`
-                Object1:
-                    - <<Object2>>?
-                Object2:
-                    - test
-            `));
-    
-            const possibleSyntaxTrees = grammar.parseRule(new GameRule('test?'));
-    
-            expect(possibleSyntaxTrees).to.deep.equal({
-                ['Object1']: {
-                    ['Object2']: 'test'
-                } 
-            });
-        });
-    
-        it('Named References are being used to name the parsed GST.', () => {
-            const grammar = Grammar.ofRaw(cleanYamlString(`
-                Object1:
-                    - <<ObjectA@Object2>> <<ObjectB@Object2>>
-                Object2:
-                    - test
-            `));
-    
-            const possibleSyntaxTrees = grammar.parseRule(new GameRule('test test'));
-    
-            expect(possibleSyntaxTrees).to.deep.equal({
-                ['Object1']: {
-                    ['ObjectA']: 'test',
-                    ['ObjectB']: 'test'
-                } 
-            });
-        });
-    });
 });

@@ -7,8 +7,7 @@ import { InvalidComponentException } from "../Exceptions/InvalidComponentExcepti
 import { MissingSetupException } from "../Exceptions/MissingSetupException";
 import { NonExistingException } from "../Exceptions/NonExistingException";
 import { Player } from "./Player";
-import { State } from "./State";
-import { ActionFunction, ActionID, ComponentID, EntityID, GuardID, PlainObject, PlayerID, StateID } from "./Types";
+import { ActionFunction, ActionID, ComponentID, EntityID, GuardID, PlainObject, PlayerID } from "./Types";
 import { InvalidEntityException } from "../Exceptions/InvalidEntityException";
 import { cartesianProduct, getAllCombinations, getFunctionParameters, intersection } from "../Util";
 import { InvalidActionException } from "../Exceptions/InvalidActionException";
@@ -113,9 +112,9 @@ export class Game implements GameAccessor {
         if(unnecessaryValues.length > 0) throw new InvalidEntityException(`The Entity "${optional.name}" is defining values which can not be matched to belong to any of its Components "${componentDefinitions.map((component) => this.idByComponent.get(component))}": "${unnecessaryValues}`)
 
         Object.assign(values, optional.values);
-        if(Object.values(values).includes(undefined)) throw new MissingSetupException(`The values "${Object.entries(values).filter(([_, value]) => value === undefined).map(([key, value]) => key)}" of the Entity "${optional.name}" are not set. Since they are required values from the Components, you need to initialize them!`);
+        if(Object.values(values).includes(undefined)) throw new MissingSetupException(`The values "${Object.entries(values).filter(([_, value]) => value === undefined).map(([key, _]) => key)}" of the Entity "${optional.name}" are not set. Since they are required values from the Components, you need to initialize them!`);
         
-        const entity = new Entity(name, this.registerAttributeChange, values);
+        const entity = new Entity(values);
 
         //write changes
         this.entityById.set(name, entity);
@@ -129,14 +128,6 @@ export class Game implements GameAccessor {
         });
 
         return entity;
-    };
-
-    private registerAttributeChange = (id: EntityID, key: string, value: unknown): void => { //FIXME: instead of entityID ID<Entity>
-        const entity = this.entityById.get(id)!; //FIXME: Is this true? Does it always exist?
-
-        entity[key] = value;
-
-        this.entityById.set(id, entity);
     };
 
     private validate = (components: (ComponentID | Component)[]): Component[] => {
@@ -239,7 +230,7 @@ export class Game implements GameAccessor {
             Object.assign(targetEntity, targetComponent);
             Object.assign(targetEntity, values);
             
-            if(Object.values(targetEntity).includes(undefined)) throw new MissingSetupException(`The values "${Object.entries(targetEntity).filter(([_, value]) => value === undefined).map(([key, value]) => key)}" of the Entity "${entity}" are not set. Since they are required values from the Components, you need to initialize them!`);
+            if(Object.values(targetEntity).includes(undefined)) throw new MissingSetupException(`The values "${Object.entries(targetEntity).filter(([_, value]) => value === undefined).map(([key, _]) => key)}" of the Entity "${entity}" are not set. Since they are required values from the Components, you need to initialize them!`);
            
             //write changes
             //this.entityById.set(entity, targetEntity); FIXME: Not necessary because of attribute changes done through Object.assign
@@ -292,7 +283,7 @@ export class Game implements GameAccessor {
 
             cartesianProduct(componentsToQuery.map((componentId) => this.entitiesByComponent.get(componentId)!))
                 .map((combination) => combination.map((entityID) => this.findEntityById(entityID)))
-                .filter((combination) => {
+                .filter((_) => {
                     //TODO: Implement guards here!
                     return true;
                 })
@@ -315,10 +306,6 @@ export class Game implements GameAccessor {
                     this.allActions.set(actionID, allCombinationForAction);
                 });
         });
-    };
-
-    public registerState = (name: StateID): State => {
-        throw new Error("Method not implemented.");
     };
     
     public registerAction = (name: ActionID, language: string | ((...words: Entity[]) => string), event: (...args: Entity[]) => void): ActionFunction => 
@@ -391,10 +378,6 @@ export class Game implements GameAccessor {
 
         this.updateActions();
         this.iteration++;
-    };
-
-    public do = (action: Action | ActionID, ...parameter: EntityID[]): void =>  {
-        throw new Error("Method not implemented.");
     };
 
     public componentExists = (componentID: ComponentID): boolean => {

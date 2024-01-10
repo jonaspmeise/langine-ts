@@ -5,7 +5,9 @@ export class InvalidRulebookException extends Error {
 
     public static containsNoRules = (text: string): InvalidRulebookException => {
         return new InvalidRulebookException(`
-        No rules could be parsed from the supplied text from which the Rulebook should be constructed!
+        No rules could be parsed from the supplied text from which the Rulebook should be constructed:
+
+        ${text}
         
         Did you use a custom extractor function or the right syntax to indicate the Game Mechanics?`);
     };
