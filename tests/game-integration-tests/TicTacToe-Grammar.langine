@@ -1,0 +1,28 @@
+consists out of -> <<Consists>>
+Game Board -> <<Component>>
+
+1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 -> <<Number>>
+x -> <<Sizer>>
+
+The | a -> <<SingleIdentifier>>
+
+<<Number>><<Sizer>><<Number>> -> <<Dimension>>
+
+# Single Grammar Rule: input: "<<Dimension>> grid", output: GrammarType(Grid), referencedTypes: ["Dimension", "Grid"]
+<<Dimension>> grid -> <<Grid>>
+
+
+
+<<Grid>> -> <<Component>>
+
+<<Component>><<Consists>><<Component>> -> !!!
+<<Entity>> <<Consists>> <<Entity>> -> <<ConsistsRule>>
+<<ConsistsRule>> -> <<Rule>>
+<<Rule>>. -> <<Rule>>
+
+<<Identifier>> <<Component>> -> <<Entity>>
+<<SingleIdentifier>> -> <<Identifier>>
+<<Identifier>> -> <<Filter>>
+<<Identifier>> <<Filter>> -> <<Filter>>
+<<Filter>> <<Component>> -> <<Entity>>
+<<Filter>> <<Entity>> -> <<Entity>>

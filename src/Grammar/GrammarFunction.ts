@@ -1,0 +1,1 @@
+export type GrammarFunction = (...args: unknown[]) => unknown;

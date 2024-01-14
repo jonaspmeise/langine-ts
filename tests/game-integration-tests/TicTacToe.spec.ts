@@ -1,14 +1,13 @@
 import { expect } from "chai";
-import { Grammar } from "../../src/Grammar/Grammar";
 import { Rulebook } from "../../src/Rulebook/Rulebook";
+import { Grammar } from "../../src/Grammar/Grammar";
 
 describe('Tic-Tac-Toe Integration Test.', () => {
-
     beforeEach(() => {
         const rulebook = Rulebook.ofFile('./tests/game-integration-tests/TicTacToe-Rulebook.md');
-        const grammar = Grammar.ofFile('./tests/game-integration-tests/TicTacToe-Grammar.yaml');
+        const grammar = Grammar.ofFile('./tests/game-integration-tests/TicTacToe-Grammar.langine');
 
-        const syntaxTrees = grammar.parseRules(rulebook, 'MetaRule');
+        const syntaxTrees = grammar.parseRules(rulebook);
 
         console.log(syntaxTrees);
     });

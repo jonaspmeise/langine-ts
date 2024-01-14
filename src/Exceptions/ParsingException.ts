@@ -1,5 +1,4 @@
 import { StackEntry } from "../ECS/Types";
-import { GrammarSyntaxTree } from "../Grammar/GrammarSyntaxTree";
 
 export class ParsingException extends Error {
     constructor(message: string) {
@@ -18,12 +17,15 @@ export class ParsingException extends Error {
         return new ParsingException(`The rule "${rule}" could not be parsed by the Grammar!`)
     };
 
+    /*
+    TODO:
     public static moreThanOneMatch = (rule: string, possibleGSTs: GrammarSyntaxTree[]): ParsingException => {
         return new ParsingException(`The rule "${rule}" has multiple possible Parsings. Consider changing the rules to make it unique:
         
         ${possibleGSTs.map((gst) => gst.toString()).join('\n\t')}
         `)
     };
+    */
 
     public static infiniteSelfReference = (currentVisitation: StackEntry, stack: StackEntry[]): ParsingException => {
         return new ParsingException(`Parsing the provided Grammar Rules results in an infinite self-reference. While trying to parse

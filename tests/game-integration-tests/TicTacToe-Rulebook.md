@@ -4,7 +4,7 @@
 The objective of Tic Tac Toe is to form a horizontal, vertical, or diagonal line of three of your own markers (X or O) on the 3x3 game board.
 
 ## **Game Components**
-- {{ The Game Board consists out of a 3x3 grid. }}
+- {{ The Game Board consists out of a 3x5 grid. }}
 - {{ Each Player uses a distinct Marker, either X or O. }}
 
 ## **Setup**
