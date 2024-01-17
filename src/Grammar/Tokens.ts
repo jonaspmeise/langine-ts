@@ -25,7 +25,7 @@ export class Token {
                 }
 
                 //Check for duplicates
-                if(this.references.has(reference.name)) throw InvalidTokenError.duplicateNamedReferences(match, [reference.name, this.references.get(reference.name)!.name])
+                if(this.references.has(reference.name)) throw InvalidTokenError.duplicateNamedReferences(text, [reference.name, this.references.get(reference.name)!.name])
                 this.references.set(reference.name, reference);
             });
 

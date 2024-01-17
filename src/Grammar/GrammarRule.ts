@@ -14,6 +14,8 @@ export class GrammarRule implements GrammarRuleContract {
     constructor(private input: Token, private output: Token, logger: Logger = new DefaultLogger()) {
         logger.info('start');
 
+        if(input.text === output.text) throw InvalidRuleError.inputEqualsOutput(input, output);
+
         if(input.isMixedToken() && output.isMixedToken()) {
             //Find out how the Types in the Input and Output align
             const wrongOutputReferences = [...output.references.entries()].filter(([key, outputReference]) => {

@@ -24,4 +24,11 @@ export class InvalidRuleError extends Error {
         Adjust the Rule so that each Reference in the Input and Output with an identical Name also references an identical Type!
         `);
     };
+
+    public static inputEqualsOutput = (input: Token, output: Token): InvalidRuleError => {
+        return new InvalidRuleError(`
+        The Grammar Rule with the Input "${input.text}" has an identical Output "${output.text}".
+        This would lead to an infinite self-reference, adjust the Rule so that Input and Output are different.  
+        `);
+    };
 }

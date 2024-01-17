@@ -7,7 +7,7 @@ describe('Tic-Tac-Toe Integration Test.', () => {
         const rulebook = Rulebook.ofFile('./tests/game-integration-tests/TicTacToe-Rulebook.md');
         const grammar = Grammar.ofFile('./tests/game-integration-tests/TicTacToe-Grammar.langine');
 
-        const syntaxTrees = grammar.parseRules(rulebook);
+        const syntaxTrees = grammar.parse(rulebook);
 
         console.log(syntaxTrees);
     });

@@ -6,7 +6,7 @@ x -> <<Sizer>>
 
 The | a -> <<SingleIdentifier>>
 
-<<Number>><<Sizer>><<Number>> -> <<Dimension>>
+<<Number@Dimension_1>><<Sizer>><<Number@Dimension_2>> -> <<Dimension>>
 
 # Single Grammar Rule: input: "<<Dimension>> grid", output: GrammarType(Grid), referencedTypes: ["Dimension", "Grid"]
 <<Dimension>> grid -> <<Grid>>
@@ -15,8 +15,8 @@ The | a -> <<SingleIdentifier>>
 
 <<Grid>> -> <<Component>>
 
-<<Component>><<Consists>><<Component>> -> !!!
-<<Entity>> <<Consists>> <<Entity>> -> <<ConsistsRule>>
+<<Component>><<Consists>><<Component@Part>> -> !!!
+<<Entity>> <<Consists>> <<Entity@Part>> -> <<ConsistsRule>>
 <<ConsistsRule>> -> <<Rule>>
 <<Rule>>. -> <<Rule>>
 

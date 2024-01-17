@@ -38,14 +38,6 @@ import { Logger } from "../Logger/Logger";
         - E.g., all Rules that state "A consists out of B" can be handled as StaticRules, because they describe the state of something and don't reference an Action.
 */
 
-
-//Tests writing
-//
-//Default function implementations? Simply "handing" through the Object?
-//Priority on order of evaluation of Grammar Rules based on priority in the Grammar.
-//After constructing a Grammar, warn when there are Rules that are not.
-//If a Grammar Rule could not be parsed finally into <<Rule>>, <<Component>>, <<Entity>> or <<Action>>.
-
 describe('Grammar Rules.', () => {
     it('Mixed Token -> Mixed Token Rules require the Output to reference Types present in the Input.', () => {
         expect(() => GrammarRule.create('Draw a <<Card>>', 'Move a <<Card>> from the Deck to your <<Hand>>')).to.throw(InvalidRuleError);
@@ -62,6 +54,10 @@ describe('Grammar Rules.', () => {
 
         GrammarRule.create('Draw a <<Card>> from your <<Hand>>', 'Move a <<Card>>', logger);
     });
+
+    it('Input and Output can not be equal.', () => {
+        expect(() => GrammarRule.create('<<something>> else', '<<something>> else')).to.throw(InvalidRuleError);
+    });
        
     it('Mixed Token -> Mixed Token Rules require that the Types in the Output reference the Types in the Input by their Names.', () => {
         expect(() => GrammarRule.create('<<Component@Whole>> consists of <<Component@Part>', '<<Whole>> references <<Component>>')).to.throw(InvalidRuleError); 
@@ -69,14 +65,5 @@ describe('Grammar Rules.', () => {
 
     it('Mixed Token -> Mixed Token Rules can not reference different Types with the same Name.', () => {
         expect(() => GrammarRule.create('<<Component@A>> exists.', '<<Entity@A>> is being referenced.')).to.throw(InvalidRuleError); 
-    });
-
-    it('Simple Token -> Type Token Rules can be instantiated.', () => {
-    });
-
-    it('Mixed Token -> Type Token can be instantiated.', () => {
-    });
-
-    it('Type Token -> Type Token can be instantiated.', () => {
     });
 });
