@@ -125,4 +125,25 @@ describe('Grammar.', () => {
         parsed = grammar.parseStep(parsed);
         expect(parsed.text).to.deep.equal('<<Rule>>');
     });
+
+    it('Parsing a Game Rule with a Grammar Rule that has named Types works.', () => {
+        const rule = new GameRule('something consists out of something else');
+
+        const grammar = Grammar.ofText(`
+            something -> <<SomethingToken>>
+            <<SomethingToken>> else -> <<SomethingToken>>
+
+            consists out of -> <<ConsistsToken>>
+            <<SomethingToken>> -> <<Component>>
+            <<A@Component>> <<ConsistsToken>> <<B@Component>> -> <<ConsistsRule>>
+            <<ConsistsRule>> -> <<Rule>>
+        `);
+
+        const result = grammar.parse(rule);
+
+        //The rule could be parsed successfully!
+        expect(result.text).to.deep.equal('<<Rule>>');
+        //We needed a total of 6 Steps to solve the Rule
+        expect(result.history).to.have.length(6);
+    });
 });

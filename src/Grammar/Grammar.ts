@@ -11,8 +11,8 @@ import { GrammarRule } from "./GrammarRule";
 import { Token } from "./Tokens";
 
 interface GrammarContract {
-    parse(rulebook: Rulebook): GameRule;
-    parse(rule: GameRule): GameRule;
+    parse(rulebook: Rulebook): ParsingResult[];
+    parse(rule: GameRule): ParsingResult;
     parseStep(rule: GameRule): ParsingResult;
 }
 
@@ -35,7 +35,7 @@ export class Grammar extends Map<string, GrammarRule> implements GrammarContract
         }
 
         const ruleToApply = [...this.values()].find((rule) => {
-            const tokens = new RegExp(rule.getInput().text, 'g');
+            const tokens = rule.getInput().regex;
             const match = text.match(tokens);
 
             return match !== null;
@@ -53,34 +53,22 @@ export class Grammar extends Map<string, GrammarRule> implements GrammarContract
         return {text: appliedRule, history: history.concat(appliedRule)};
     };
 
-    public parse(rule: GameRule): GameRule;
-    public parse(rulebook: Rulebook): GameRule;
-    public parse(rules: Rulebook | GameRule): GameRule {
-        if(!Array.isArray(rules)) rules = [rules];
+    public parse(rule: GameRule): ParsingResult;
+    public parse(rulebook: Rulebook): ParsingResult[];
+    public parse(rules: Rulebook | GameRule): ParsingResult | ParsingResult[] {
+        if(Array.isArray(rules)) return rules.map((rule) => this.parse(rule));
 
-        rules.map((rule) => rule.rule).forEach((context) => {
-            const results: string[] = [];
-            
-            while(true) {
-                let next = context;
+        let newResult: ParsingResult;
+        let currentResult: ParsingResult = this.parseStep(rules);
 
-                [...this.values()].forEach((rule) => {
-                    const regex = new RegExp(rule.getInput().text, 'g');
-                    const matches = next.match(regex);
-        
-                    if(matches === null) return;
-        
-                    next = next.replaceAll(regex, rule.getOutput().text);
-                    results.push(next);
-                });
-        
-                if(next === context) throw Error(`End!\n${results.join('\n')}`);
+        while(true) {
+            newResult = this.parseStep(currentResult);
 
-                context = next;
-            }
-        });
+            //Stop searching if we finished parsing all Rules.
+            if(newResult === currentResult) return newResult;
 
-        return new GameRule('abc');
+            currentResult = newResult;
+        };
     };
 
     public static ofFile = (path: string): Grammar => {
