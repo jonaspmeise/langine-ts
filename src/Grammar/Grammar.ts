@@ -44,10 +44,15 @@ export class Grammar extends Map<string, GrammarRule> implements GrammarContract
         //Validate that we found a rule at all
         if(ruleToApply === undefined) throw ParsingError.noApplicableRuleFound(text);
 
-        const appliedRule = text.replaceAll(ruleToApply.getInput().text, ruleToApply.getOutput().text);
+        //There might be an Error with the Rule, where replacing the found Input with the Output did not work.
+        const appliedRule = ruleToApply.isApplicable(parsingResult);
+        const appliedRule = ruleToApply.apply(text);
 
+        text.replace(ruleToApply.getInput().text, ruleToApply.getOutput().text);
+
+        if(appliedRule === text) throw ParsingError.writebackFailed(text, ruleToApply);
         //...and that we will not cause an infinite loop by revisiting already past-seen states
-        if(history.includes(appliedRule)) throw ParsingError.infiniteSelfReference(text, ruleToApply, history);
+        if(history.includes(appliedRule)) throw ParsingError.infiniteSelfReference(appliedRule, ruleToApply, history);
 
 
         return {text: appliedRule, history: history.concat(appliedRule)};

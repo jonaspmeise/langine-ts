@@ -146,4 +146,14 @@ describe('Grammar.', () => {
         //We needed a total of 6 Steps to solve the Rule
         expect(result.history).to.have.length(6);
     });
+
+    it('A single parse step with a Gramma rRule thas has named Types works.', () => {
+        const rule = new GameRule('<<Component>> <<ConsistsToken>> <<Component>>');
+
+        const grammar = Grammar.ofText(`
+            <<A@Component>> <<ConsistsToken>> <<B@Component>> -> <<ConsistsRule>>
+        `);
+
+        expect(grammar.parseStep(rule).text).to.deep.equal('<<ConsistsRule>>');
+    });
 });
