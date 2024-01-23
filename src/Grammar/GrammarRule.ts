@@ -2,12 +2,15 @@ import { InvalidRuleError } from "../Exceptions/InvalidRuleError";
 import { DefaultLogger } from "../Logger/DefaultLogger";
 import { Logger } from "../Logger/Logger";
 import { GrammarFunction } from "./GrammarFunction";
+import { ParsingResult } from "./ParsingResult";
 import { Token } from "./Tokens";
 
 interface GrammarRuleContract {
     getInput(): Token;
     getOutput(): Token;
     getFunction(): GrammarFunction;
+    isApplicable(text: string): boolean;
+    apply(text: string): ParsingResult;
 }
 
 export class GrammarRule implements GrammarRuleContract {
@@ -42,6 +45,14 @@ export class GrammarRule implements GrammarRuleContract {
             `);
         }
     }
+
+    isApplicable = (text: string): boolean => {
+        return this.input.matchRegex.test(text);
+    };
+
+    apply = (text: string): ParsingResult => {
+        return {text: text.replace(this.input.textWithoutTypes, this.output.textWithoutTypes), history: []};
+    };
 
     public getInput = (): Token => {
         return this.input;

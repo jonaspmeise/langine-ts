@@ -34,10 +34,10 @@ describe('Tokens.', () => {
     });
 
     it('Mixed Tokens with named References can be instantiated.', () => {
-        const token = new Token('<<A@Component>> <<consists>> <<B@Component>>');
+        const token = new Token('<<Component@A>> <<consists>> <<Component@B>>');
 
         expect(token.references).to.have.keys('A', 'consists', 'B');
-        expect(token.text).to.deep.equal('<<A@Component>> <<consists>> <<B@Component>>');
+        expect(token.text).to.deep.equal('<<Component@A>> <<consists>> <<Component@B>>');
         expect(token.isSimpleToken()).to.be.false;
         expect(token.isTypeToken()).to.be.false;
         expect(token.isMixedToken()).to.be.true;
@@ -52,18 +52,18 @@ describe('Tokens.', () => {
     });
 
     it('Names referenced in a Token need to be named uniquely.', () => {
-        expect(() => new Token('<<A@Entity>> consists out of <<A@Component>>')).to.throw(InvalidTokenError);
+        expect(() => new Token('<<Entity@A>> consists out of <<Component@A>>')).to.throw(InvalidTokenError);
     });
 
     it('The query Regex of a simple Token is constructed correctly.', () => {
         const token = new Token('consists out of ??');
         
-        expect(token.regex).to.deep.equal(new RegExp('consists out of \\?\\?', 'g'));
+        expect(token.matchRegex).to.deep.equal(new RegExp('consists out of \\?\\?', 'g'));
     });
 
     it('Named References in a Token are translated correctly into RegEx.', () => {
-        const token = new Token('<<A@Entity>> consists out of <<B@Component>>');
+        const token = new Token('<<Entity@A>> consists out of <<Component@B>>');
 
-        expect(token.regex).to.deep.equal(new RegExp('<<(?<A>Entity)>> consists out of <<(?<B>Component)>>', 'g'));
+        expect(token.matchRegex).to.deep.equal(new RegExp('<<(?<A>Entity)>> consists out of <<(?<B>Component)>>', 'g'));
     });
 });

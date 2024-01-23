@@ -135,7 +135,7 @@ describe('Grammar.', () => {
 
             consists out of -> <<ConsistsToken>>
             <<SomethingToken>> -> <<Component>>
-            <<A@Component>> <<ConsistsToken>> <<B@Component>> -> <<ConsistsRule>>
+            <<Component@A>> <<ConsistsToken>> <<Component@B>> -> <<ConsistsRule>>
             <<ConsistsRule>> -> <<Rule>>
         `);
 
@@ -147,11 +147,11 @@ describe('Grammar.', () => {
         expect(result.history).to.have.length(6);
     });
 
-    it('A single parse step with a Gramma rRule thas has named Types works.', () => {
+    it('A single parse step with a Grammar Rule thas has named Types works.', () => {
         const rule = new GameRule('<<Component>> <<ConsistsToken>> <<Component>>');
 
         const grammar = Grammar.ofText(`
-            <<A@Component>> <<ConsistsToken>> <<B@Component>> -> <<ConsistsRule>>
+            <<Component@A>> <<ConsistsToken>> <<Component@B>> -> <<ConsistsRule>>
         `);
 
         expect(grammar.parseStep(rule).text).to.deep.equal('<<ConsistsRule>>');

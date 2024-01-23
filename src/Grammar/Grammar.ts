@@ -34,28 +34,20 @@ export class Grammar extends Map<string, GrammarRule> implements GrammarContract
             history = rule.history;
         }
 
-        const ruleToApply = [...this.values()].find((rule) => {
-            const tokens = rule.getInput().regex;
-            const match = text.match(tokens);
-
-            return match !== null;
-        });
+        const ruleToApply = [...this.values()].find((rule) => rule.isApplicable(text));
 
         //Validate that we found a rule at all
         if(ruleToApply === undefined) throw ParsingError.noApplicableRuleFound(text);
 
         //There might be an Error with the Rule, where replacing the found Input with the Output did not work.
-        const appliedRule = ruleToApply.isApplicable(parsingResult);
         const appliedRule = ruleToApply.apply(text);
 
-        text.replace(ruleToApply.getInput().text, ruleToApply.getOutput().text);
-
-        if(appliedRule === text) throw ParsingError.writebackFailed(text, ruleToApply);
+        if(appliedRule.text === text) throw ParsingError.writebackFailed(text, ruleToApply);
         //...and that we will not cause an infinite loop by revisiting already past-seen states
-        if(history.includes(appliedRule)) throw ParsingError.infiniteSelfReference(appliedRule, ruleToApply, history);
+        if(history.includes(appliedRule.text)) throw ParsingError.infiniteSelfReference(appliedRule.text, ruleToApply, history);
 
 
-        return {text: appliedRule, history: history.concat(appliedRule)};
+        return {text: appliedRule.text, history: history.concat(appliedRule.text)};
     };
 
     public parse(rule: GameRule): ParsingResult;
