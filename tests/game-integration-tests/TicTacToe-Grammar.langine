@@ -1,18 +1,7 @@
-consists out of -> <<Consists>>
-Game Board -> <<Component>>
-
-1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 -> <<Number>>
-x -> <<Sizer>>
-grid -> <<GridToken>>
-
-The | a -> <<SingleIdentifier>>
-
 <<Number@Dimension_1>><<Sizer>><<Number@Dimension_2>> -> <<Dimension>>
 
 # Single Grammar Rule: input: "<<Dimension>> grid", output: GrammarType(Grid), referencedTypes: ["Dimension", "Grid"]
 <<Dimension>> <<GridToken>> -> <<Grid>>
-
-
 
 <<Grid>> -> <<Component>>
 
@@ -27,3 +16,21 @@ The | a -> <<SingleIdentifier>>
 <<Identifier>> <<Filter>> -> <<Filter>>
 <<Filter>> <<Component>> -> <<Entity>>
 <<Filter>> <<Entity>> -> <<Entity>>
+<<EachToken>> -> <<Filter>>
+<<PlayerToken>> -> <<Component>>
+<<MarkerToken>> -> <<Component>>
+
+# Normal Tokens
+
+Each -> <<EachToken>>
+Player -> <<PlayerToken>>
+Marker -> <<MarkerToken>>
+
+consists out of -> <<Consists>>
+Game Board -> <<Component>>
+grid -> <<GridToken>>
+
+1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 -> <<Number>>
+x -> <<Sizer>>
+
+The | a -> <<SingleIdentifier>>

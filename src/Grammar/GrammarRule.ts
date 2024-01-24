@@ -1,25 +1,23 @@
 import { InvalidRuleError } from "../Exceptions/InvalidRuleError";
 import { DefaultLogger } from "../Logger/DefaultLogger";
 import { Logger } from "../Logger/Logger";
-import { GrammarFunction } from "./GrammarFunction";
 import { ParsingResult } from "./ParsingResult";
-import { Token } from "./Tokens";
+import { Sentence } from "./Sentence";
 
 interface GrammarRuleContract {
-    getInput(): Token;
-    getOutput(): Token;
-    getFunction(): GrammarFunction;
+    getInput(): Sentence;
+    getOutput(): Sentence;
     isApplicable(text: string): boolean;
     apply(text: string): ParsingResult;
 }
 
 export class GrammarRule implements GrammarRuleContract {
-    constructor(private input: Token, private output: Token, logger: Logger = new DefaultLogger()) {
+    constructor(private input: Sentence, private output: Sentence, logger: Logger = new DefaultLogger()) {
         logger.info('start');
 
         if(input.text === output.text) throw InvalidRuleError.inputEqualsOutput(input, output);
 
-        if(input.isMixedToken() && output.isMixedToken()) {
+        if(input.isMixedSentence() && output.isMixedSentence()) {
             //Find out how the Types in the Input and Output align
             const wrongOutputReferences = [...output.references.entries()].filter(([key, outputReference]) => {
                 const inputReference = this.input.references.get(key);
@@ -54,19 +52,15 @@ export class GrammarRule implements GrammarRuleContract {
         return {text: text.replace(this.input.textWithoutTypes, this.output.textWithoutTypes), history: []};
     };
 
-    public getInput = (): Token => {
+    public getInput = (): Sentence => {
         return this.input;
     };
 
-    public getOutput = (): Token => {
+    public getOutput = (): Sentence => {
         return this.output;
     };
 
-    public getFunction = (): GrammarFunction => {
-        return () => undefined;
-    };
-
     public static create = (input: string, output: string, logger: Logger = new DefaultLogger()) => {
-        return new GrammarRule(new Token(input), new Token(output), logger);
+        return new GrammarRule(new Sentence(input), new Sentence(output), logger);
     };
 }

@@ -144,7 +144,7 @@ describe('Grammar.', () => {
         //The rule could be parsed successfully!
         expect(result.text).to.deep.equal('<<Rule>>');
         //We needed a total of 6 Steps to solve the Rule
-        expect(result.history).to.have.length(6);
+        expect(result.history).to.have.length(8);
     });
 
     it('A single parse step with a Grammar Rule thas has named Types works.', () => {

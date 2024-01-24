@@ -5,10 +5,13 @@ export class ParsingError extends Error {
         super(message);
     }
 
-    public static noApplicableRuleFound = (text: string): ParsingError => {
+    public static noApplicableRuleFound = (text: string, history: string[] = []): ParsingError => {
         return new ParsingError(`
         No applicable Rule could be found to parse:
             ${text}
+
+        ${history.length > 0 ? `History:
+        ${history.join('\n\t')}`: ''}
         `);
     };
 

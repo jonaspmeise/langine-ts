@@ -10,7 +10,7 @@ import { InvalidRuleError } from "../Exceptions/InvalidRuleError";
 import { Logger } from "../Logger/Logger";
 
 /*There are three possible cases of what Grammar Rules are:
-    1.  Token -> Token
+    1.  Sentence -> Sentence
             e.g. "Player" -> "player"
         - For purely orthographical changes.
 
@@ -22,9 +22,9 @@ import { Logger } from "../Logger/Logger";
         - The Input and Output references have to be unique or have an unique name at least.
         - @After parsing the grammar; check whether all Types exist.
 
-    3.  Token -> Type
+    3.  Sentence -> Type
             e.g. "consists out of" | "is constructed of" -> "<<consists>>"
-        - useful for having syntactical invariants of semantical tokens
+        - useful for having syntactical invariants of semantical Sentences
 
     4.  Mixed -> Type
             e.g. "<<Component@A>> <<consists>> <<Component@B>> -> <<ConsistsRule>>"
@@ -39,12 +39,12 @@ import { Logger } from "../Logger/Logger";
 */
 
 describe('Grammar Rules.', () => {
-    it('Mixed Token -> Mixed Token Rules require the Output to reference Types present in the Input.', () => {
+    it('Mixed Sentence -> Mixed Sentence Rules require the Output to reference Types present in the Input.', () => {
         expect(() => GrammarRule.create('Draw a <<Card>>', 'Move a <<Card>> from the Deck to your <<Hand>>')).to.throw(InvalidRuleError);
     });
 
     //This behavior is possible, but not really useful in real-life situations
-    it('Mixed Token -> Mixed Token Rules issue a warning if there are Types which are referenced in the Input, but not in the Output.', function(done) {
+    it('Mixed Sentence -> Mixed Sentence Rules issue a warning if there are Types which are referenced in the Input, but not in the Output.', function(done) {
         const logger: Logger = {
             warn: (_) => {done(); return undefined},
             error: (_) => undefined,
@@ -59,11 +59,11 @@ describe('Grammar Rules.', () => {
         expect(() => GrammarRule.create('<<something>> else', '<<something>> else')).to.throw(InvalidRuleError);
     });
        
-    it('Mixed Token -> Mixed Token Rules require that the Types in the Output reference the Types in the Input by their Names.', () => {
+    it('Mixed Sentence -> Mixed Sentence Rules require that the Types in the Output reference the Types in the Input by their Names.', () => {
         expect(() => GrammarRule.create('<<Component@Whole>> consists of <<Component@Part>', '<<Whole>> references <<Component>>')).to.throw(InvalidRuleError); 
     });
 
-    it('Mixed Token -> Mixed Token Rules can not reference different Types with the same Name.', () => {
+    it('Mixed Sentence -> Mixed Sentence Rules can not reference different Types with the same Name.', () => {
         expect(() => GrammarRule.create('<<Component@A>> exists.', '<<Entity@A>> is being referenced.')).to.throw(InvalidRuleError); 
     });
 });

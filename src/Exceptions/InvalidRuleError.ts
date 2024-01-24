@@ -1,14 +1,14 @@
 import { Reference } from "../Grammar/Reference";
-import { Token } from "../Grammar/Tokens";
+import { Sentence } from "../Grammar/Sentence";
 
 export class InvalidRuleError extends Error {
     constructor(message: string) {
         super(message);
     }
 
-    public static outputReferenceWithoutInput = (input: Token, output: Token, wrongOutputReferences: [string, Reference][]): InvalidRuleError => {
+    public static outputReferenceWithoutInput = (input: Sentence, output: Sentence, wrongOutputReferences: [string, Reference][]): InvalidRuleError => {
         return new InvalidRuleError(`
-        The Output Token "${output.text}" references Types which are not present in the Input Token "${input.text}":
+        The Output "${output.text}" references Types which are not present in the Input "${input.text}":
             
             ${wrongOutputReferences.map((reference) => reference[0]).join('\n\t')}
         `);
@@ -25,7 +25,7 @@ export class InvalidRuleError extends Error {
         `);
     };
 
-    public static inputEqualsOutput = (input: Token, output: Token): InvalidRuleError => {
+    public static inputEqualsOutput = (input: Sentence, output: Sentence): InvalidRuleError => {
         return new InvalidRuleError(`
         The Grammar Rule with the Input "${input.text}" has an identical Output "${output.text}".
         This would lead to an infinite self-reference, adjust the Rule so that Input and Output are different.  
