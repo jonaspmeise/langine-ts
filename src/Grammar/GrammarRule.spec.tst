@@ -8,6 +8,7 @@ import { expect } from "chai";
 import { GrammarRule } from "./GrammarRule";
 import { InvalidRuleError } from "../Exceptions/InvalidRuleError";
 import { Logger } from "../Logger/Logger";
+import { Sentence } from "./Sentence";
 
 /*There are three possible cases of what Grammar Rules are:
     1.  Sentence -> Sentence
@@ -65,5 +66,17 @@ describe('Grammar Rules.', () => {
 
     it('Mixed Sentence -> Mixed Sentence Rules can not reference different Types with the same Name.', () => {
         expect(() => GrammarRule.create('<<Component@A>> exists.', '<<Entity@A>> is being referenced.')).to.throw(InvalidRuleError); 
+    });
+
+    it('Is applied correctly to target Sentences.', () => {
+        const sentence = new Sentence('This is a test.');
+        const rule = new GrammarRule(new Sentence('test'), new Sentence('<<TestToken>>'));
+
+        const result = rule.apply(sentence).sentence;
+        expect(result.tokens).to.have.length(1);
+
+        const token = [...result.tokens.values()][0]
+        expect(token.name).to.equal('TestToken');
+        expect(token.type).to.equal('TestToken');
     });
 });

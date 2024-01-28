@@ -1,4 +1,6 @@
+import { Sentence } from "./Sentence";
+
 export interface ParsingResult {
-    text: string;
+    sentence: Sentence;
     history: string[];
 }

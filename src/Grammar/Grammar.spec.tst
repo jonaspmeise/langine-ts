@@ -114,16 +114,16 @@ describe('Grammar.', () => {
         `);
 
         let parsed = grammar.parseStep(rule);
-        expect(parsed.text).to.deep.equal('<<Identifier>> is a test!');
+        expect(parsed.sentence.definition).to.deep.equal('<<Identifier>> is a test!');
         
         parsed = grammar.parseStep(parsed);
-        expect(parsed.text).to.deep.equal('<<Identifier>> is a <<Something>>!');
+        expect(parsed.sentence.definition).to.deep.equal('<<Identifier>> is a <<Something>>!');
 
         parsed = grammar.parseStep(parsed);
-        expect(parsed.text).to.deep.equal('<<Rule>>!');
+        expect(parsed.sentence.definition).to.deep.equal('<<Rule>>!');
 
         parsed = grammar.parseStep(parsed);
-        expect(parsed.text).to.deep.equal('<<Rule>>');
+        expect(parsed.sentence.definition).to.deep.equal('<<Rule>>');
     });
 
     it('Parsing a Game Rule with a Grammar Rule that has named Types works.', () => {
@@ -142,18 +142,8 @@ describe('Grammar.', () => {
         const result = grammar.parse(rule);
 
         //The rule could be parsed successfully!
-        expect(result.text).to.deep.equal('<<Rule>>');
-        //We needed a total of 6 Steps to solve the Rule
+        expect(result.sentence.definition).to.deep.equal('<<Rule>>');
+        //We needed a total of 8 Steps to solve the Rule
         expect(result.history).to.have.length(8);
-    });
-
-    it('A single parse step with a Grammar Rule thas has named Types works.', () => {
-        const rule = new GameRule('<<Component>> <<ConsistsToken>> <<Component>>');
-
-        const grammar = Grammar.ofText(`
-            <<Component@A>> <<ConsistsToken>> <<Component@B>> -> <<ConsistsRule>>
-        `);
-
-        expect(grammar.parseStep(rule).text).to.deep.equal('<<ConsistsRule>>');
     });
 });

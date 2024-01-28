@@ -1,13 +1,11 @@
 import { InvalidSentenceError } from "../Exceptions/InvalidSentenceError";
 import { escapeRegex } from "../Util";
-import { Reference } from "./Reference";
+import { Token, TokenId } from "./Token";
 
 export class Sentence {
-    public readonly references: Map<string, Reference> = new Map();
     public readonly matchRegex: RegExp;
-    public readonly textWithoutTypes: string;
-
-    private readonly containsSimpleSentences: boolean = true;
+    public readonly definition: string;
+    private readonly containsSimpleTokens: boolean = true;
 
 
     //TODO: Do the following:
@@ -31,48 +29,57 @@ export class Sentence {
     //Or is every <<...>> a Component? Only the things we declare as Components are Components, too?
     //Components <=> exists in the game + the lingo of the game? is or can be instantiated by one or multiple entities? (board, hp, values, cards, zones, ...)
     
-    constructor(public readonly text: string) {
-        const matches = [...text.matchAll(new RegExp(`<<(.+?)>>`, 'g'))];
+    constructor(text: string, public readonly tokens: Map<TokenId, Token> = new Map()) {        
+        const tokenDefinitions = [...text.matchAll(new RegExp(`<<(.+?)>>`, 'g'))];
         let regexQuery: string = escapeRegex(text);
         let replacementText = text;
 
         //FIXME: Somehow we always expect a capture group here. What if there isn't one?
-        const foundReferences = matches.map((groups) => groups[1]);
+        const foundReferences = tokenDefinitions.map((groups) => groups[1]);
 
         if(foundReferences.length > 0) {
             foundReferences.forEach((match) => {
+                //If the token is already registered, we don't need to continue
+                if(this.tokens.has(match)) return;
+
                 //We try to identify whether the Reference has a custom Name
                 const split = match.split('@');
                 if(split.length > 2) throw InvalidSentenceError.invalidNamedReference(match);
 
-                const reference = (split.length == 2) ? new Reference(split[0], split[1]) : new Reference(match);
-                regexQuery = regexQuery.replaceAll(`<<${match}>>`, `<<(?<${reference.name}>${reference.type})>>`);
+                const reference = (split.length == 2) ? new Token(split[0], split[1]) : new Token(match);
+                //Replace the Token Definition with its Reference
+                regexQuery = regexQuery.replace(`<<${match}>>`, `<<(?<${reference.id}>.+?)>>`);
 
                 //The text to write into the Sentence, if we apply it to something.
-                replacementText = replacementText.replaceAll(`<<${match}>>`, `<<${reference.type}>>`);
+                replacementText = replacementText.replace(`<<${match}>>`, `<<${reference.id}>>`);
 
-                //Check for duplicates
-                if(this.references.has(reference.name)) throw InvalidSentenceError.duplicateNamedReferences(text, [reference.name, this.references.get(reference.name)!.name]);
-                this.references.set(reference.name, reference);
+                //Check for duplicate Types that have the same name. This would cause confusion when mapping the parsed Types to Functions.
+                const duplicateToken = [...this.tokens.values()].find((token) => token.name === reference.name);
+                if(duplicateToken !== undefined) throw InvalidSentenceError.duplicateNamedReferences(text, [reference, duplicateToken]);
+
+                this.tokens.set(reference.id, reference);
             });
-
-            //Are there any references to other Types?
-            this.containsSimpleSentences = matches[0][0] !== text;
+    
+            //Check, whether our sentence has normal tokens, too.
+            this.containsSimpleTokens = tokenDefinitions[0][0] !== text;
+            
+            this.matchRegex = new RegExp(`(?=${regexQuery})`, 'g');
+        } else {
+            this.matchRegex = new RegExp(text, 'g');
         }
-        
-        this.matchRegex = new RegExp(regexQuery, 'g');
-        this.textWithoutTypes = replacementText;
+
+        this.definition = text;
     }
 
     public isTypeSentence = (): boolean => {
-        return this.references.size > 0 && !this.containsSimpleSentences;
+        return this.tokens.size > 0 && !this.containsSimpleTokens;
     };
 
     public isMixedSentence = (): boolean => {
-        return this.references.size > 0 && this.containsSimpleSentences;
+        return this.tokens.size > 0 && this.containsSimpleTokens;
     };
 
     public isSimpleSentence = (): boolean => {
-        return this.references.size == 0 && this.containsSimpleSentences;
+        return this.tokens.size == 0 && this.containsSimpleTokens;
     };
 }

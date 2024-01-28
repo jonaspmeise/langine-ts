@@ -22,35 +22,23 @@ export class Grammar extends Map<string, GrammarRule> implements GrammarContract
         super(rules);
     }
 
-    public parseStep = (rule: GameRule | ParsingResult): ParsingResult => {
-        let text: string;
+    public parseStep = (input: GameRule | ParsingResult): ParsingResult => {
         let history: string[] = [];
 
         //Change the setup depending on the type of the Input
-        if (rule instanceof GameRule) {
-            text = rule.rule;
-        } else {
-            text = rule.text;
-            history = rule.history;
-        }
+        let sentence: Sentence = (input instanceof GameRule) ? new Sentence(input.text) : input.sentence; 
 
         //TODO: This is only preliminary. Needs logic.
-        if(text === '<<Rule>>') return {text: text, history: history};
+        //if(rule.text === '<<Rule>>') return {sentence: rule, history: history};
 
-        const ruleToApply = [...this.values()].find((rule) => rule.isApplicable(text));
+        //FIXME: Remvove new Sentence(...)
+        const ruleToApply = [...this.values()].find((grammarRule) => grammarRule.isApplicable(sentence));
 
         //Validate that we found a rule at all
-        if(ruleToApply === undefined) throw ParsingError.noApplicableRuleFound(text, history);
+        if(ruleToApply === undefined) throw ParsingError.noApplicableRuleFound(sentence, history);
 
         //There might be an Error with the Rule, where replacing the found Input with the Output did not work.
-        const appliedRule = ruleToApply.apply(text);
-
-        if(appliedRule.text === text) throw ParsingError.writebackFailed(text, ruleToApply);
-        //...and that we will not cause an infinite loop by revisiting already past-seen states
-        if(history.includes(appliedRule.text)) throw ParsingError.infiniteSelfReference(appliedRule.text, ruleToApply, history);
-
-
-        return {text: appliedRule.text, history: history.concat(appliedRule.text)};
+        return ruleToApply.apply(sentence, history);
     };
 
     public parse(rule: GameRule): ParsingResult;
@@ -65,7 +53,7 @@ export class Grammar extends Map<string, GrammarRule> implements GrammarContract
             newResult = this.parseStep(currentResult);
 
             //Stop searching if we finished parsing all Rules.
-            if(newResult.text === currentResult.text) return newResult;
+            if(newResult.sentence.definition === currentResult.sentence.definition) return newResult;
 
             currentResult = newResult;
         };

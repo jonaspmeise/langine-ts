@@ -1,9 +1,9 @@
 export class GameRule {
-    public readonly rule: string;
+    public readonly text: string;
 
-    constructor(rule: string) {
+    constructor(text: string) {
         //Sanitize rule
-        this.rule = rule
+        this.text = text
             .trim()
             .replace(new RegExp('\\n', 'g'), ' ');
     }

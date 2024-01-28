@@ -1,3 +1,5 @@
+import { Token } from "../Grammar/Token";
+
 export class InvalidSentenceError extends Error {
     constructor(message: string) {
         super(message);
@@ -11,12 +13,12 @@ export class InvalidSentenceError extends Error {
         <<Type@Name>>`);
     };
 
-    public static duplicateNamedReferences = (text: string, duplicates: string[]) => {
+    public static duplicateNamedReferences = (text: string, duplicates: Token[]) => {
         return new InvalidSentenceError(`
         The Rule "${text}" references Types which are ambigious due to duplicate names.
         The following Types have either the same Type without custom Names or the same custom Name:
         
-        ${duplicates.join('\n\t')}
+        ${duplicates.map((token) => `${token.type}@${token.name}`).join('\n\t')}
         
         Consider giving them unique Names.`);
     };

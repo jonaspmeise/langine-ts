@@ -14,4 +14,18 @@ export type Rule = string;
 export type StackEntry = {
     rule: string,
     text: string
-}
+};
+
+export type IdGenerator = () => string;
+
+export const defaultIdGenerator: IdGenerator = (length: number = 32): string => {
+    const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let uuid = '';
+
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * letters.length);
+        uuid += letters.charAt(randomIndex);
+    }
+
+    return uuid;
+};
