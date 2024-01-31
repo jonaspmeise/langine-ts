@@ -1,5 +1,5 @@
 import { InvalidSentenceError } from "../Exceptions/InvalidSentenceError";
-import { escapeRegex } from "../Util";
+import { escapeRegex, intersection } from "../Util";
 import { Token, TokenId } from "./Token";
 
 export class Sentence {
@@ -37,17 +37,30 @@ export class Sentence {
         //FIXME: Somehow we always expect a capture group here. What if there isn't one?
         const foundReferences = tokenDefinitions.map((groups) => groups[1]);
 
+        //There should be no Reference which is passed, but does not exist anymore. 
+        //We want a clean Sentence definition without dead references
+        const inactiveReferences = Array.from(tokens.entries())
+            .map(([id, _]) => id)
+            .filter((id) => !(new RegExp(`<<${id}>>`).test(text)))
+
+        if(inactiveReferences.length > 0) throw InvalidSentenceError.inactiveReference(text, inactiveReferences);
+
         if(foundReferences.length > 0) {
             foundReferences.forEach((match) => {
                 //If the token is already registered, we don't need to continue
-                if(this.tokens.has(match)) return;
+                if(this.tokens.has(match)) {
+                    //We still have to adjust the regex
+                    regexQuery = regexQuery.replace(`<<${match}>>`, `<<(?<${match}>.+?)>>`);
+                    return;
+                }
 
                 //We try to identify whether the Reference has a custom Name
                 const split = match.split('@');
                 if(split.length > 2) throw InvalidSentenceError.invalidNamedReference(match);
 
-                const reference = (split.length == 2) ? new Token(split[0], split[1]) : new Token(match);
+                const reference = (split.length == 2) ? new Token([split[0]], split[1]) : new Token([match], match);
                 //Replace the Token Definition with its Reference
+                //We use a weird Capturing Group here to capture possible multi-token references (cross-border words)
                 regexQuery = regexQuery.replace(`<<${match}>>`, `<<(?<${reference.id}>.+?)>>`);
 
                 //The text to write into the Sentence, if we apply it to something.
@@ -68,7 +81,7 @@ export class Sentence {
             this.matchRegex = new RegExp(text, 'g');
         }
 
-        this.definition = text;
+        this.definition = replacementText;
     }
 
     public isTypeSentence = (): boolean => {
@@ -82,4 +95,31 @@ export class Sentence {
     public isSimpleSentence = (): boolean => {
         return this.tokens.size == 0 && this.containsSimpleTokens;
     };
+
+    public appearsIn = (sentence: Sentence): boolean => {
+        const possibleMatches = Array.from(sentence.definition.matchAll(this.matchRegex)).map((match) => match.groups);
+
+        const match = possibleMatches.find((match) => {
+            if(match === undefined) return;
+
+            //Find all Token Pairs that match on the syntactical Regex
+            const tokenPairs = Object.entries(match).map(([ourTokenId, otherTokenId], _) => {
+                if(!this.tokens.has(ourTokenId)) throw new Error(); //TODO: Throw error!!
+                if(!sentence.tokens.has(otherTokenId)) throw new Error(); //TODO: Throw error!
+
+                return [this.tokens.get(ourTokenId)!, sentence.tokens.get(otherTokenId)!];
+            });
+
+            //Check, whether each Pair has atleast one matching Type in common.
+            return tokenPairs.every((pair) => {
+                const [ourToken, theirToken]: Token[] = pair;
+                const matchingTypes = intersection(ourToken.types, theirToken.types);
+
+                return matchingTypes.size > 0;
+            });
+        });
+
+        //If we find a match, we check whether the Token with this ID matches any of our Tokens.
+        return match !== undefined;
+    }
 }

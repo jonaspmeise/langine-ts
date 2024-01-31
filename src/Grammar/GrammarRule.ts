@@ -25,7 +25,9 @@ export class GrammarRule implements GrammarRuleContract {
 
                 //The identical Reference in Input and Output has to reference the same Name AND Type!
                 if(inputReference) {
-                    if(outputReference.type !== inputReference.type) throw InvalidRuleError.mismatchingReferenceTypes(inputReference, outputReference);
+                    //FIXME: Types are Sets, but are (at the moment) only single values here.
+                    //There is a possibility that in the future, one can directly assign multiple types within a single step to a Token!?
+                    if(outputReference.types !== inputReference.types) throw InvalidRuleError.mismatchingReferenceTypes(inputReference, outputReference);
                 }
 
                 return !inputReference;
@@ -75,7 +77,7 @@ export class GrammarRule implements GrammarRuleContract {
                     const outputToken: Token = [...this.output.tokens.values()][0];
 
                     //TODO: Test: If the same Grammar Rule is applied to a sentence, the token get different IDs
-                    const token: Token = new Token(outputToken.type, outputToken.name);
+                    const token: Token = new Token(outputToken.types, outputToken.name);
 
                     //[0] here because we only replace one match per step
                     text = text.replace(result[0], `<<${token.id}>>`);

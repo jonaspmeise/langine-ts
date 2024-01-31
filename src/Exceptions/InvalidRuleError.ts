@@ -18,8 +18,8 @@ export class InvalidRuleError extends Error {
         return new InvalidRuleError(`
         The References with the Name "${input.name}" in the Input and Output have different Types:
             
-        Input:  ${input.type}
-        Output. ${output.type}
+        Input:  ${Array.from(input.types)}
+        Output. ${Array.from(output.types)}
 
         Adjust the Rule so that each Reference in the Input and Output with an identical Name also references an identical Type!
         `);
