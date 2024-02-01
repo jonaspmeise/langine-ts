@@ -2,7 +2,19 @@ import { InvalidSentenceError } from "../Exceptions/InvalidSentenceError";
 import { escapeRegex, intersection } from "../Util";
 import { Token, TokenId } from "./Token";
 
-export class Sentence {
+export interface SentenceContract {
+    getSentenceType: () => SentenceType;
+    appearsIn: (sentence: Sentence) => boolean;
+    getSharedTokensWith: (sentence: Sentence) => Map<Token, Token>[];
+}
+
+export enum SentenceType {
+    simple,
+    type,
+    mixed
+}
+
+export class Sentence implements SentenceContract {
     public readonly matchRegex: RegExp;
     public readonly definition: string;
     private readonly containsSimpleTokens: boolean = true;
@@ -84,42 +96,63 @@ export class Sentence {
         this.definition = replacementText;
     }
 
-    public isTypeSentence = (): boolean => {
-        return this.tokens.size > 0 && !this.containsSimpleTokens;
-    };
+    public getSentenceType = (): SentenceType => {
+        if(this.tokens.size == 0) return SentenceType.simple;
+        if(!this.containsSimpleTokens) return SentenceType.type;
 
-    public isMixedSentence = (): boolean => {
-        return this.tokens.size > 0 && this.containsSimpleTokens;
-    };
-
-    public isSimpleSentence = (): boolean => {
-        return this.tokens.size == 0 && this.containsSimpleTokens;
-    };
+        return SentenceType.mixed;
+    }
 
     public appearsIn = (sentence: Sentence): boolean => {
-        const possibleMatches = Array.from(sentence.definition.matchAll(this.matchRegex)).map((match) => match.groups);
+        //For Simple Sentence -> Simple Sentence rules we only need to consider the simple text
+        if(this.getSentenceType() === SentenceType.simple && sentence.getSentenceType() === SentenceType.simple) {
+            return this.matchRegex.test(sentence.definition);
+        }
 
-        const match = possibleMatches.find((match) => {
-            if(match === undefined) return;
+        return this.getSharedTokensWith(sentence).length > 0;
+    };
 
-            //Find all Token Pairs that match on the syntactical Regex
-            const tokenPairs = Object.entries(match).map(([ourTokenId, otherTokenId], _) => {
-                if(!this.tokens.has(ourTokenId)) throw new Error(); //TODO: Throw error!!
-                if(!sentence.tokens.has(otherTokenId)) throw new Error(); //TODO: Throw error!
+    public fullMatches = (sentence: Sentence): boolean => {
+        //For Simple Sentence -> Simple Sentence rules we only need to consider the simple text
+        if(this.getSentenceType() === SentenceType.simple && sentence.getSentenceType() === SentenceType.simple) {
+            return new RegExp(`^${this.matchRegex.source}$`, 'g').test(sentence.definition);
+        }
+        return this.getSharedTokensWith(sentence, true).length > 0;
+    };
 
-                return [this.tokens.get(ourTokenId)!, sentence.tokens.get(otherTokenId)!];
-            });
+    public getSharedTokensWith = (sentence: Sentence, fullMatches: boolean = false): Map<Token, Token>[] => {
+        const regex = fullMatches ? new RegExp(`^${this.matchRegex.source}$`, 'g') : this.matchRegex;
+        const possibleMatches = Array.from(sentence.definition.matchAll(regex)).map((match) => match.groups);
+        //BIG TODO: Rewrite API to make sense of matches.
+        //We pre-generate the regex with the loose capturing group (?=<<(?<something>.+?)>>), but then can't make that global anymore
+        //So: Rewrite into a good API with test cases. Think of test cases first!!!
+        const matches = possibleMatches
+            .filter((match) => {
+                if(match === undefined) return false;
 
-            //Check, whether each Pair has atleast one matching Type in common.
-            return tokenPairs.every((pair) => {
-                const [ourToken, theirToken]: Token[] = pair;
-                const matchingTypes = intersection(ourToken.types, theirToken.types);
+                //Find all Token Pairs that match on the syntactical Regex
+                const tokenPairs = Object.entries(match).map(([ourTokenId, otherTokenId], _) => {
+                    if(!this.tokens.has(ourTokenId)) throw new Error(); //TODO: Throw error!!
+                    if(!sentence.tokens.has(otherTokenId)) throw new Error(); //TODO: Throw error!
 
-                return matchingTypes.size > 0;
-            });
-        });
+                    return [this.tokens.get(ourTokenId)!, sentence.tokens.get(otherTokenId)!];
+                });
 
-        //If we find a match, we check whether the Token with this ID matches any of our Tokens.
-        return match !== undefined;
-    }
+                //Check, whether each Pair has atleast one matching Type in common.
+                return tokenPairs.every((pair) => {
+                    const [ourToken, theirToken]: Token[] = pair;
+                    const matchingTypes = intersection(ourToken.types, theirToken.types);
+
+                    return matchingTypes.size > 0;
+                });
+            })
+            .map((match) => new Map<Token, Token>(
+                Object.entries(match!)
+                    //We additionally map the IDs to Tokens; we are sure that they exist 100% at this point.
+                    .map(([key, value]) => [this.tokens.get(key)!, sentence.tokens.get(value)!])
+                )
+            );
+
+        return matches;
+    };
 }

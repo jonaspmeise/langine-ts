@@ -6,11 +6,11 @@ export class InvalidRuleError extends Error {
         super(message);
     }
 
-    public static outputReferenceWithoutInput = (input: Sentence, output: Sentence, wrongOutputReferences: [string, Token][]): InvalidRuleError => {
+    public static outputReferenceWithoutInput = (input: Sentence, output: Sentence, wrongOutputReferences: Token[]): InvalidRuleError => {
         return new InvalidRuleError(`
         The Output "${output.definition}" references Types which are not present in the Input "${input.definition}":
             
-            ${wrongOutputReferences.map((reference) => reference[0]).join('\n\t')}
+            ${wrongOutputReferences.map((reference) => reference.name).join('\n\t')}
         `);
     };
 

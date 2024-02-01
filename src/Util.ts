@@ -47,7 +47,25 @@ export const intersection = <T> (...sets: Set<T>[]): Set<T> => {
     });
   
     return result;
-  };
+};
+
+export const disjunction = <T> (...sets: Set<T>[]): Set<T> => {
+    if (sets.length === 0) {
+        return new Set();
+    }
+
+    const result = new Set(...sets);
+  
+    result.forEach((value) => {
+        const occurences = sets.filter((otherSet) => otherSet.has(value));
+
+        if(occurences.length > 1) result.delete(value);
+
+        if(result.size == 0) return;
+    });
+  
+    return result;
+}; 
 
 export const createPlainObject = (originalObject: { [key: string]: any }): { [key: string]: any } => {
     if (!originalObject.hasOwnProperty('id')) {

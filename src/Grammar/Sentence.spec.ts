@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Sentence } from "./Sentence";
+import { Sentence, SentenceType } from "./Sentence";
 import { InvalidSentenceError } from "../Exceptions/InvalidSentenceError";
 import { Token, TokenId } from "./Token";
 
@@ -9,9 +9,7 @@ describe('Sentences.', () => {
 
         expect(sentence.tokens).to.be.empty;
         expect(sentence.definition).to.deep.equal('Player');
-        expect(sentence.isSimpleSentence()).to.be.true;
-        expect(sentence.isTypeSentence()).to.be.false;
-        expect(sentence.isMixedSentence()).to.be.false;
+        expect(sentence.getSentenceType()).to.deep.equal(SentenceType.simple);
     });
 
     it('Type Sentences can be instantiated.', () => {
@@ -19,9 +17,7 @@ describe('Sentences.', () => {
 
         const registeredTokenNames = [...sentence.tokens.values()].map((token) => token.name);
         expect(registeredTokenNames).to.include('Consists');
-        expect(sentence.isSimpleSentence()).to.be.false;
-        expect(sentence.isTypeSentence()).to.be.true;
-        expect(sentence.isMixedSentence()).to.be.false;
+        expect(sentence.getSentenceType()).to.deep.equal(SentenceType.type);
     });
 
     it('Mixed Sentences can be instantiated.', () => {
@@ -31,9 +27,7 @@ describe('Sentences.', () => {
         expect(registeredTokenNames).to.include('Component');
         expect(registeredTokenNames).to.include('destroys');
         expect(registeredTokenNames).to.include('Entity');
-        expect(sentence.isSimpleSentence()).to.be.false;
-        expect(sentence.isTypeSentence()).to.be.false;
-        expect(sentence.isMixedSentence()).to.be.true;
+        expect(sentence.getSentenceType()).to.deep.equal(SentenceType.mixed);
     });
 
     it('Mixed Sentences with named References can be instantiated.', () => {
@@ -43,9 +37,7 @@ describe('Sentences.', () => {
         expect(registeredTokenNames).to.include('A');
         expect(registeredTokenNames).to.include('consists');
         expect(registeredTokenNames).to.include('B');
-        expect(sentence.isSimpleSentence()).to.be.false;
-        expect(sentence.isTypeSentence()).to.be.false;
-        expect(sentence.isMixedSentence()).to.be.true;
+        expect(sentence.getSentenceType()).to.deep.equal(SentenceType.mixed);
     });
 
     it('Named Sentences with invalid Syntax are not allowed.', () => {
@@ -56,7 +48,7 @@ describe('Sentences.', () => {
         expect(() => new Sentence('<<Component>> consists out of <<Component>>')).to.throw(InvalidSentenceError);
     });
 
-    it('Names referenced in a Sentence need to be named uniquely.', () => {
+    it('Named referenced in a Sentence need to be named uniquely.', () => {
         expect(() => new Sentence('<<Entity@A>> consists out of <<Component@A>>')).to.throw(InvalidSentenceError);
     });
 
@@ -103,9 +95,7 @@ describe('Sentences.', () => {
         expect(sentence.definition).to.match(new RegExp('This is a <<\\w{16,}>>'));
 
         //The Sentence has both normal Tokens ('This is a') and Reference Tokens (<<Token>>)
-        expect(sentence.isMixedSentence()).to.be.true;
-        expect(sentence.isTypeSentence()).to.be.false;
-        expect(sentence.isSimpleSentence()).to.be.false;
+        expect(sentence.getSentenceType()).to.deep.equal(SentenceType.mixed);
 
         expect(sentence.tokens).to.have.length(1);
         const token = Array.from(sentence.tokens.values())[0];
@@ -194,5 +184,81 @@ describe('Sentences.', () => {
 
         //The "This is a"-Part matches, and the Tokens have the same Type. It should match!
         expect(sentence.appearsIn(otherSentence)).to.be.true;
+    });
+
+    describe('Appears In-Functionality.', () => {
+        it('Simple Sentence -> Simple Sentence Rules are correctly evaluated to appear in other Sentences.', () => {
+            const sentence1 = new Sentence('Test');
+            const sentence2 = new Sentence('This is a Test!');
+            expect(sentence1.appearsIn(sentence2)).to.be.true;
+        });
+
+        it('Simple Sentence -> Type Sentence Rules are correctly evaluated to appear in other Sentences.', () => {
+            const sentence1 = new Sentence('Test');
+            const sentence2 = new Sentence('<<Test>>');
+            expect(sentence1.appearsIn(sentence2)).to.be.false;
+        });
+
+        it('Type Sentence -> Type Sentence Rules are correctly evaluated to appear in other Sentences.', () => {
+            const sentence1 = new Sentence('<<Test>>');
+            const sentence2 = new Sentence('<<Test2>>');
+            expect(sentence1.appearsIn(sentence2)).to.be.false;
+        });
+
+        it('Type Sentence -> Mixed Sentence Rules are correctly evaluated to appear in other Sentences.', () => {
+            const sentence1 = new Sentence('<<Test>>');
+            const sentence2 = new Sentence('<<Test>> is a consumed Token!');
+            expect(sentence1.appearsIn(sentence2)).to.be.true;
+        });
+
+        it('Mixed Sentence -> Type Sentence Rules are correctly evaluated to appear in other Sentences.', () => {
+            const sentence1 = new Sentence('This is a <<Test>>');
+            const sentence2 = new Sentence('<<TestSentence>>');
+            expect(sentence1.appearsIn(sentence2)).to.be.false;
+        });
+
+        it('Mixed Sentence -> Mixed Sentence Rules are correctly evaluated to appear in other Sentences.', () => {
+            const sentence1 = new Sentence('This is a <<Test>>');
+            const sentence2 = new Sentence('This is a <<Test>> with something more!');
+            expect(sentence1.appearsIn(sentence2)).to.be.true;
+        });
+    });
+
+    describe('Full Match-Functionality.', () => {
+        it('Simple Sentence -> Simple Sentence Rules are correctly evaluated to full-match in other Sentences.', () => {
+            const sentence1 = new Sentence('This is a Test!');
+            const sentence2 = new Sentence('This is a Test!');
+            expect(sentence1.fullMatches(sentence2)).to.be.true;
+        });
+
+        it('Simple Sentence -> Type Sentence Rules are correctly evaluated to full-match other Sentences.', () => {
+            const sentence1 = new Sentence('Test');
+            const sentence2 = new Sentence('<<Test>>');
+            expect(sentence1.fullMatches(sentence2)).to.be.false;
+        });
+
+        it('Type Sentence -> Type Sentence Rules are correctly evaluated to full-match other Sentences.', () => {
+            const sentence1 = new Sentence('<<Test>>');
+            const sentence2 = new Sentence('<<Test2>>');
+            expect(sentence1.fullMatches(sentence2)).to.be.false;
+        });
+
+        it('Type Sentence -> Mixed Sentence Rules are correctly evaluated to full-match other Sentences.', () => {
+            const sentence1 = new Sentence('<<Test>>');
+            const sentence2 = new Sentence('<<Test>> is a consumed Token!');
+            expect(sentence1.fullMatches(sentence2)).to.be.true;
+        });
+
+        it('Mixed Sentence -> Type Sentence Rules are correctly evaluated to full-match other Sentences.', () => {
+            const sentence1 = new Sentence('This is a <<Test>>');
+            const sentence2 = new Sentence('<<TestSentence>>');
+            expect(sentence1.fullMatches(sentence2)).to.be.false;
+        });
+
+        it('Mixed Sentence -> Mixed Sentence Rules are correctly evaluated to full-match other Sentences.', () => {
+            const sentence1 = new Sentence('<<ThisToken>> is a <<TestToken>>');
+            const sentence2 = new Sentence('<<ThisToken>> is a <<TestToken>>');
+            expect(sentence1.fullMatches(sentence2)).to.be.true;
+        });
     });
 });

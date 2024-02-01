@@ -2,7 +2,7 @@ import { InvalidRuleError } from "../Exceptions/InvalidRuleError";
 import { DefaultLogger } from "../Logger/DefaultLogger";
 import { Logger } from "../Logger/Logger";
 import { ParsingResult } from "./ParsingResult";
-import { Sentence } from "./Sentence";
+import { Sentence, SentenceType } from "./Sentence";
 import { Token } from "./Token";
 
 interface GrammarRuleContract {
@@ -16,24 +16,29 @@ export class GrammarRule implements GrammarRuleContract {
     constructor(private input: Sentence, private output: Sentence, logger: Logger = new DefaultLogger()) {
         logger.info('start');
 
-        if(input.definition === output.definition) throw InvalidRuleError.inputEqualsOutput(input, output);
+        if(input.fullMatches(output)) {
+            //We might have an identical Input and Output.
+            //We evaluate the Tokens to see whether they differ.
+            const sharedTokens = input.getSharedTokensWith(output);
+            const tokensAreIdentical = Array.from(sharedTokens.values())
+                .every((tokens) => Array.from(tokens.entries())
+                    .every(([ourToken, otherToken]) => ourToken.equals(otherToken))
+                ) && sharedTokens.length > 0;
 
-        if(input.isMixedSentence() && output.isMixedSentence()) {
-            //Find out how the Types in the Input and Output align
-            const wrongOutputReferences = [...output.tokens.entries()].filter(([key, outputReference]) => {
-                const inputReference = this.input.tokens.get(key);
+            if(tokensAreIdentical) throw InvalidRuleError.inputEqualsOutput(input, output);
+        }
 
-                //The identical Reference in Input and Output has to reference the same Name AND Type!
-                if(inputReference) {
-                    //FIXME: Types are Sets, but are (at the moment) only single values here.
-                    //There is a possibility that in the future, one can directly assign multiple types within a single step to a Token!?
-                    if(outputReference.types !== inputReference.types) throw InvalidRuleError.mismatchingReferenceTypes(inputReference, outputReference);
-                }
+        if(input.getSentenceType() === SentenceType.mixed 
+            && output.getSentenceType() === SentenceType.mixed) {
+            //We check that there are no References in the Output without matching References in the Input.
+            //This would imply a Setup Problem: We do not know how to map from the Input -> Output!
+            const aloneOutputReferences = [...output.tokens.values()].filter((outputReference) => {
+                const matchingInputReference = Array.from(this.input.tokens.values()).find((token) => token.name === outputReference.name);
 
-                return !inputReference;
+                return matchingInputReference === undefined;
             });
 
-            if(wrongOutputReferences.length > 0) throw InvalidRuleError.outputReferenceWithoutInput(input, output, wrongOutputReferences);
+            if(aloneOutputReferences.length > 0) throw InvalidRuleError.outputReferenceWithoutInput(input, output, aloneOutputReferences);
 
             const nonUsedInputReferences = [...input.tokens.entries()].filter(([key, _]) => !this.output.tokens.has(key));
             
@@ -70,9 +75,9 @@ export class GrammarRule implements GrammarRuleContract {
 
         //TODO: Test: A Grammar Rule which has two matches to a given Sentence, only applies it once though.
         results.find((result) => {
-            if(sentence.isSimpleSentence() || sentence.isMixedSentence()) {
+            if(sentence.getSentenceType() !== SentenceType.type) {
                 //we don't expect capture groups here, so we just replace simple Tokens
-                if(this.output.isTypeSentence()) {
+                if(this.output.getSentenceType() === SentenceType.type) {
                     //The Type Token which "consumes" the Tokens from the Input
                     const outputToken: Token = [...this.output.tokens.values()][0];
 
