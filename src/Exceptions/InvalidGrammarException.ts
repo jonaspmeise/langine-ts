@@ -41,7 +41,7 @@ export class InvalidGrammarException extends Error {
         
         ${ruleDefinition}
         
-        Consider to change the Rule Definition to consume other Tokens, so that the Rule is being "reduced" with each feedback call.`);
+        Consider to change the Rule Definition.`);
     };
 
     public static duplicateReferenceKey = (referenceKey: string, rule: string): InvalidGrammarException => {

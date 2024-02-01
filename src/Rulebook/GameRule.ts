@@ -1,10 +1,16 @@
-export class GameRule {
-    public readonly rule: string;
+import { Sentence } from "../Grammar/Sentence";
 
-    constructor(rule: string) {
+export class GameRule {
+    public readonly text: string;
+
+    constructor(text: string) {
         //Sanitize rule
-        this.rule = rule
+        this.text = text
             .trim()
             .replace(new RegExp('\\n', 'g'), ' ');
+    }
+
+    public toSentence = (): Sentence => {
+        return new Sentence(this.text);
     }
 }
