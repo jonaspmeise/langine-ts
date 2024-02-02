@@ -1,7 +1,7 @@
 export class Reference {
     constructor(
         public readonly name: string,
-        public readonly type: [string],
+        public readonly type: string[],
         public readonly id: ReferenceId = generateId()
     ) {}
 
@@ -10,6 +10,7 @@ export class Reference {
     };
 
     public static parseReferences = (text: string): References => {
+        !!text;
         return new Map();
     };
 }
