@@ -18,4 +18,13 @@ describe('Mixed Sentences.', () => {
         expect(sentence.definition).to.not.equal(text);
         expect(sentence.references).to.have.length(2);
     });
+
+    it('inject() works and updates the definition.', () => {
+        const text = 'This is a wrong sentence, since it has a <<testId>> and another <<testId2>>. How confusing!';
+        const sentence = new MixedSentence(text);
+
+        expect(sentence.definition.indexOf('<<testId2>>')).to.equal(-1);
+        expect(sentence.definition.indexOf('<<testId>>')).to.equal(-1);
+        expect(sentence.references).to.have.length(2);
+    });
 });

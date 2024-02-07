@@ -12,21 +12,31 @@ export class Grammar {
     }
 
     public static from = (text: string): Grammar => {
-        const rules: GrammarRule<Sentence, Sentence>[] = text.split('\n')
+        const allRules: GrammarRule<Sentence, Sentence>[] = [];
+
+        //Parse each Line of the text and extract all rules
+        text.split('\n')
             .map((line) => line.trim())
             .filter((line) => line.length > 0) //ignore empty lines
             .filter((line) => !line.startsWith('#')) //ignore comments
-            .map((line) => {
+            .forEach((line) => { //parse into Input/Output
                 const split = line.split(' -> ');
 
                 if(split.length !== 2) throw InvalidGrammarError.wrongRuleFormat(line);
 
-                return GrammarRuleFactory.build(
-                    SentenceFactory.parse(split[0]),
-                    SentenceFactory.parse(split[1])
-                );
+                const output = SentenceFactory.parse(split[1]);
+
+                //The Input can have multiple parts by using the "|" as a divider between sentences
+                return split[0].split('|')
+                    .map((inputPart) => inputPart.trim())
+                    .forEach((inputPart) => {
+                        allRules.push(GrammarRuleFactory.build(
+                            SentenceFactory.parse(inputPart),
+                            output
+                        ));
+                    });
             });
 
-        return new Grammar(rules);
+        return new Grammar(allRules);
     };
 }

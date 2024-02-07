@@ -51,4 +51,11 @@ describe('Grammar.', () => {
 
         new Grammar([], logger);
     });
+
+    it('Multiple Rules can be defined at the same time by using the "|"-Operator.', () => {
+        const text = '<<TokenA>> | <<TokenB>> | Some <<TokenC>> -> <<UmbrellaToken>>';
+
+        const grammar = Grammar.from(text);
+        expect(grammar.rules).to.have.length(3);
+    });
 });

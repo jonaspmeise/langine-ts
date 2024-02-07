@@ -3,8 +3,6 @@ import { Reference, References } from "../Reference/Reference";
 import { Sentence } from "./Sentence";
 
 export class MixedSentence extends Sentence {
-    public readonly references: References;
-
     constructor(definition: string) {
         const foundReferences = Reference.parseReferences(definition);
 
@@ -12,8 +10,7 @@ export class MixedSentence extends Sentence {
         if(foundReferences === undefined) throw InvalidSentenceError.mixedWithoutReferences(definition);
 
         //Update the text to represent the "rendered" References
-        super(MixedSentence.injectReferences(definition, foundReferences));
-        this.references = foundReferences;
+        super(MixedSentence.injectReferences(definition, foundReferences), foundReferences);
 
         //Are there normal tokens?
         if(!Sentence.hasNormalTokens(definition)) throw InvalidSentenceError.mixedWithoutNormalText(definition);
@@ -22,7 +19,7 @@ export class MixedSentence extends Sentence {
     private static injectReferences = (definition: string, references: References): string => {
         let text = definition;
 
-        references.forEach((reference) => {
+        Array.from(references.values()).forEach((reference) => {
             text = text.replace(`<<${reference.definition}>>`, reference.toRenderString());
         });
 

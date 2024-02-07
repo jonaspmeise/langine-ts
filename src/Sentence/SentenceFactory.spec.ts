@@ -25,8 +25,8 @@ describe('Sentence Factory.', () => {
 
             expect(sentence).to.be.instanceOf(TypeSentence);
             expect(sentence.definition).to.not.equal(text);
-            expect(sentence.reference.name).to.equal('TypeExample');
-            expect(sentence.reference.types).to.deep.equal(['TypeExample']);
+            expect(Array.from(sentence.references.values())[0].name).to.equal('TypeExample');
+            expect(Array.from(sentence.references.values())[0].types).to.deep.equal(['TypeExample']);
         });
 
         it('#3', () => {
@@ -43,8 +43,8 @@ describe('Sentence Factory.', () => {
 
             expect(sentence).to.be.instanceOf(TypeSentence);
             expect(sentence.definition).to.not.equal(text);
-            expect(sentence.reference.name).to.equal('SomeName');
-            expect(sentence.reference.types).to.deep.equal(['TypeExample']);
+            expect(Array.from(sentence.references.values())[0].name).to.equal('SomeName');
+            expect(Array.from(sentence.references.values())[0].types).to.deep.equal(['TypeExample']);
         });
 
     });

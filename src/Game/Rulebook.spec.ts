@@ -5,6 +5,7 @@ import { Rulebook } from "./Rulebook";
 describe('Rulebook.', () => {
     it('A Rulebook has to have atleast one Rule.', () => {
         expect(() => new Rulebook([])).to.throw(InvalidRulebookError);
+        expect(() => Rulebook.from('')).to.throw(InvalidRulebookError);
     });
 
     it('A Rulebook only parses Rules of a specific format (default: {{...}}).', () => {

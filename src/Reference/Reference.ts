@@ -42,15 +42,13 @@ export class Reference {
         const nameTypeSplit = definition.split('@');
         
         //Default case
-        if(nameTypeSplit.length == 1) return new Reference(definition, [definition], definition);
-
-        //A custom name was given: TYPE@NAME
-        if(nameTypeSplit.length == 2) return new Reference(nameTypeSplit[1], [nameTypeSplit[0]], definition);
+        if(nameTypeSplit.length === 1) return new Reference(definition, [definition], definition);
 
         //This is nonsense, because the second '@' has no meaning!
         if(nameTypeSplit.length > 2) throw InvalidReferenceError.wrongFormat(definition);
 
-        return new Reference(definition, [definition], definition);
+        //A custom name was given: TYPE@NAME
+        return new Reference(nameTypeSplit[1], [nameTypeSplit[0]], definition);
     };
 }
 
