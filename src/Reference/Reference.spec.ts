@@ -4,11 +4,11 @@ import { InvalidReferenceError } from "../Error/InvalidReferenceError";
 
 describe('Reference.', () => {
     it('ID is automatically generated.', () => {
-        expect(new Reference('123', ['123'], 'does not matter').id).to.not.be.undefined;
+        expect(Reference.from('abc123').id).to.not.be.undefined;
     });
 
     it('toRenderString() returns the Reference-ID.', () => {
-        expect(new Reference('123', ['123'], '123', 'my-custom-id').toRenderString()).to.deep.equal('<<my-custom-id>>');
+        expect(new Reference('abc123', ['abc123'], 'does not matter', 'my-custom-id').toRenderString()).to.deep.equal('<<my-custom-id>>');
     });
 
     describe('parseReferences() works.', () => {
@@ -113,7 +113,8 @@ describe('Reference.', () => {
                 {wrongSymbol: '.', text: () => new Reference('Name.', ['Type'], 'does not matter')},
                 {wrongSymbol: '"', text: () => new Reference('"Name"', ['Type'], 'does not matter')},
                 {wrongSymbol: '\'', text: () => new Reference('\'Name\'', ['Type'], 'does not matter')},
-                {wrongSymbol: '[WHITESPACE]', text: () => new Reference('Name   ', ['Type'], 'does not matter')}
+                {wrongSymbol: '[WHITESPACE]', text: () => new Reference('Name   ', ['Type'], 'does not matter')},
+                {wrongSymbol: '[NUMERICAL FIRST]', text: () => new Reference('123abc', ['Type'], 'does not matter')}
             ];
 
             testCases.forEach((testCase) => {

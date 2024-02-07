@@ -8,7 +8,7 @@ export class Reference {
         public readonly definition: string,
         public readonly id: ReferenceId = generateId()
     ) {
-        const validNameRegex = new RegExp('^[a-zA-Z0-9_]+$');
+        const validNameRegex = new RegExp('^[a-zA-Z][a-zA-Z0-9_]*$');
 
         if(!validNameRegex.test(name)) throw InvalidReferenceError.invalidSymbols(name);
 
