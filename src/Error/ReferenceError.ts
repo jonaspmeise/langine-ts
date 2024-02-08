@@ -1,10 +1,10 @@
-export class InvalidReferenceError extends Error {
+export class ReferenceError extends Error {
     constructor(message: string) {
         super(message);
     }
 
-    public static wrongFormat = (definition: string): InvalidReferenceError => {
-        return new InvalidReferenceError(`
+    public static wrongFormat = (definition: string): ReferenceError => {
+        return new ReferenceError(`
         "<<${definition}>>" is not a valid Reference definition!
         A reference has to have one of the following naming schemas:
 
@@ -13,8 +13,8 @@ export class InvalidReferenceError extends Error {
         `);
     };
 
-    public static invalidSymbols = (definition: string): InvalidReferenceError => {
-        return new InvalidReferenceError(`
+    public static invalidSymbols = (definition: string): ReferenceError => {
+        return new ReferenceError(`
         A reference name and types may not have invalid symbols!
         
         ${definition}
@@ -23,14 +23,14 @@ export class InvalidReferenceError extends Error {
         `);
     };
 
-    public static noTypes = (): InvalidReferenceError => {
-        return new InvalidReferenceError(`
+    public static noTypes = (): ReferenceError => {
+        return new ReferenceError(`
         A reference can not have an empty type! You probably passed an array of nothing to it.
         `);
     };
 
-    public static duplicateNamedReference = (text: string, duplicates: string[]): InvalidReferenceError => {
-        return new InvalidReferenceError(`
+    public static duplicateNamedReference = (text: string, duplicates: string[]): ReferenceError => {
+        return new ReferenceError(`
         The sentence "${text}" has References that have duplicate names:
 
         ${duplicates.join('\n\t')}

@@ -1,4 +1,4 @@
-import { InvalidSentenceError } from "../Error/InvalidSentenceError";
+import { SentenceError } from "../Error/SentenceError";
 import { Reference } from "../Reference/Reference";
 import { MixedSentence } from "./MixedSentence";
 import { Sentence } from "./Sentence";
@@ -14,7 +14,7 @@ export class SentenceFactory {
         const references = Reference.parseReferences(text);
 
         //Not a Simple Sentence, but has no References either? Impossible Case!
-        if(references === undefined || references.size === 0) throw InvalidSentenceError.wrongFormat(text);
+        if(references === undefined || references.size === 0) throw SentenceError.wrongFormat(text);
 
         if(!Sentence.hasNormalTokens(text)) return new TypeSentence(Array.from(references.values())[0]);
 

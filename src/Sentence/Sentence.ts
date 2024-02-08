@@ -2,7 +2,7 @@ import { References } from "../Reference/Reference";
 import { escapeRegex } from "../Util";
 
 export abstract class Sentence {
-    constructor(public readonly definition: string, public readonly references: References = new Map()) {};
+    constructor(private definition: string, public readonly references: References = new Map()) {};
 
     public static hasReferences = (text: string): boolean => {
         return new RegExp('(?<=<<).+?(?=>>)', 'g').test(text);
@@ -22,5 +22,14 @@ export abstract class Sentence {
         });
 
         return new RegExp(`(?=(${query}))`, 'gm');
+    };
+
+    public setDefinition = (definition: string): void => {
+        //TODO: Write Tests for this! We should check whether potential references introduced in the new definition are already set
+        this.definition = definition;
+    };
+
+    public getDefinition = (): string => {
+        return this.definition;
     };
 }

@@ -11,12 +11,12 @@ describe('Sentence Factory.', () => {
             const sentence = SentenceFactory.parse(text) as MixedSentence;
 
             expect(sentence).to.be.instanceOf(MixedSentence);
-            expect(sentence.definition).to.not.equal(text);
+            expect(sentence.getDefinition()).to.not.equal(text);
             expect(sentence.references).to.have.length(1);
 
             const reference = Array.from(sentence.references.values())[0];
             expect(reference.name).to.equal('Tokens');
-            expect(reference.types).to.deep.equal(['Tokens']);
+            expect(reference.types).to.deep.include('Tokens');
         });
 
         it('#2', () => {
@@ -24,9 +24,9 @@ describe('Sentence Factory.', () => {
             const sentence = SentenceFactory.parse(text) as TypeSentence;
 
             expect(sentence).to.be.instanceOf(TypeSentence);
-            expect(sentence.definition).to.not.equal(text);
+            expect(sentence.getDefinition()).to.not.equal(text);
             expect(Array.from(sentence.references.values())[0].name).to.equal('TypeExample');
-            expect(Array.from(sentence.references.values())[0].types).to.deep.equal(['TypeExample']);
+            expect(Array.from(sentence.references.values())[0].types).to.deep.include('TypeExample');
         });
 
         it('#3', () => {
@@ -34,7 +34,7 @@ describe('Sentence Factory.', () => {
             const sentence = SentenceFactory.parse(text) as SimpleSentence;
 
             expect(sentence).to.be.instanceOf(SimpleSentence);
-            expect(sentence.definition).to.equal(text);
+            expect(sentence.getDefinition()).to.equal(text);
         });
 
         it('#4', () => {
@@ -42,9 +42,9 @@ describe('Sentence Factory.', () => {
             const sentence = SentenceFactory.parse(text) as TypeSentence;
 
             expect(sentence).to.be.instanceOf(TypeSentence);
-            expect(sentence.definition).to.not.equal(text);
+            expect(sentence.getDefinition()).to.not.equal(text);
             expect(Array.from(sentence.references.values())[0].name).to.equal('SomeName');
-            expect(Array.from(sentence.references.values())[0].types).to.deep.equal(['TypeExample']);
+            expect(Array.from(sentence.references.values())[0].types).to.include('TypeExample');
         });
 
     });

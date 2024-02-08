@@ -1,4 +1,4 @@
-import { InvalidGrammarError } from "../Error/InvalidGrammarError";
+import { GrammarError } from "../Error/GrammarError";
 import { DefaultLogger } from "../Logger/DefaultLogger";
 import { Logger } from "../Logger/Logger";
 import { Sentence } from "../Sentence/Sentence";
@@ -22,7 +22,7 @@ export class Grammar {
             .forEach((line) => { //parse into Input/Output
                 const split = line.split(' -> ');
 
-                if(split.length !== 2) throw InvalidGrammarError.wrongRuleFormat(line);
+                if(split.length !== 2) throw GrammarError.wrongRuleFormat(line);
 
                 const output = SentenceFactory.parse(split[1]);
 

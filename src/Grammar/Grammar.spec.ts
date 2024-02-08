@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { InvalidGrammarError } from "../Error/InvalidGrammarError";
+import { GrammarError } from "../Error/GrammarError";
 import { Grammar } from "./Grammar";
 import { Logger } from "../Logger/Logger";
 
@@ -10,7 +10,7 @@ describe('Grammar.', () => {
                 //The following rule is missing the " -> [OUTPUT]"-Part
                 const text = 'This is a broken Rule';
 
-                expect(() => Grammar.from(text)).to.throw(InvalidGrammarError);
+                expect(() => Grammar.from(text)).to.throw(GrammarError);
             });
 
             it('Empty lines are ignored.', () => {

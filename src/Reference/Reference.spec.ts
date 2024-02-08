@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { Reference } from "./Reference";
-import { InvalidReferenceError } from "../Error/InvalidReferenceError";
+import { ReferenceError } from "../Error/ReferenceError";
 
 describe('Reference.', () => {
     it('ID is automatically generated.', () => {
@@ -82,19 +82,19 @@ describe('Reference.', () => {
 
     describe('Errors.', () => {
         it('References need to have atleast one Type.', () => {
-            expect(() => new Reference('Test', [], 'does not matter')).to.throw(InvalidReferenceError);
+            expect(() => new Reference('Test', [], 'does not matter')).to.throw(ReferenceError);
         });
 
         it('References with a wrong naming schema are not allowed. They either have to be [TYPE] or [TYPE@NAME].', () => {
-            expect(() => Reference.parseReferences('<<Test@Name@Error>> is wrong!')).to.throw(InvalidReferenceError);
+            expect(() => Reference.parseReferences('<<Test@Name@Error>> is wrong!')).to.throw(ReferenceError);
         });
 
         it('References can not share custom names within a Sentence.', () => {
-            expect(() => Reference.parseReferences('A <<Token@CustomName>> is not allowed to be combined with <<AnotherType@CustomName>>!')).to.throw(InvalidReferenceError);
+            expect(() => Reference.parseReferences('A <<Token@CustomName>> is not allowed to be combined with <<AnotherType@CustomName>>!')).to.throw(ReferenceError);
         });
 
         it('References that have no custom names, but identical types, are not allowed. A custom name has to be given to one (or both) of them.', () => {
-            expect(() => Reference.parseReferences('A <<Token>> and a <<Token>> cause much confusion!')).to.throw(InvalidReferenceError);
+            expect(() => Reference.parseReferences('A <<Token>> and a <<Token>> cause much confusion!')).to.throw(ReferenceError);
 
             Reference.parseReferences('A <<Token@Token1>> and a <<Token@Token2>> are allowed!');
         });
@@ -119,7 +119,7 @@ describe('Reference.', () => {
 
             testCases.forEach((testCase) => {
                 it(`Symbol "${testCase.wrongSymbol}" is not allowed.`, () => {
-                    expect(() => testCase.text()).to.throw(InvalidReferenceError);
+                    expect(() => testCase.text()).to.throw(ReferenceError);
                 });
             });
         });

@@ -1,4 +1,4 @@
-import { InvalidSentenceError } from "../Error/InvalidSentenceError";
+import { SentenceError } from "../Error/SentenceError";
 import { Reference, References } from "../Reference/Reference";
 import { Sentence } from "./Sentence";
 
@@ -7,13 +7,13 @@ export class MixedSentence extends Sentence {
         const foundReferences = Reference.parseReferences(definition);
 
         //Are there references?
-        if(foundReferences === undefined) throw InvalidSentenceError.mixedWithoutReferences(definition);
+        if(foundReferences === undefined) throw SentenceError.mixedWithoutReferences(definition);
 
         //Update the text to represent the "rendered" References
         super(MixedSentence.injectReferences(definition, foundReferences), foundReferences);
 
         //Are there normal tokens?
-        if(!Sentence.hasNormalTokens(definition)) throw InvalidSentenceError.mixedWithoutNormalText(definition);
+        if(!Sentence.hasNormalTokens(definition)) throw SentenceError.mixedWithoutNormalText(definition);
     }
 
     private static injectReferences = (definition: string, references: References): string => {

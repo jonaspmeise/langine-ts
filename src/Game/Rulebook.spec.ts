@@ -1,11 +1,11 @@
 import { expect } from "chai";
-import { InvalidRulebookError } from "../Error/InvalidRulebookError";
+import { RulebookError } from "../Error/RulebookError";
 import { Rulebook } from "./Rulebook";
 
 describe('Rulebook.', () => {
     it('A Rulebook has to have atleast one Rule.', () => {
-        expect(() => new Rulebook([])).to.throw(InvalidRulebookError);
-        expect(() => Rulebook.from('')).to.throw(InvalidRulebookError);
+        expect(() => new Rulebook([])).to.throw(RulebookError);
+        expect(() => Rulebook.from('')).to.throw(RulebookError);
     });
 
     it('A Rulebook only parses Rules of a specific format (default: {{...}}).', () => {
@@ -31,6 +31,6 @@ describe('Rulebook.', () => {
         const rulebook = Rulebook.from(text);
 
         expect(rulebook.rules).has.length(4);
-        expect(rulebook.rules[3].sentence.definition).to.equal('Roger that? Even Spaces are trimmed!');
+        expect(rulebook.rules[3].sentence.getDefinition()).to.equal('Roger that? Even Spaces are trimmed!');
     });
 });

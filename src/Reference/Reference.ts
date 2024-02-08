@@ -1,21 +1,25 @@
-import { InvalidReferenceError } from "../Error/InvalidReferenceError";
+import { ReferenceError } from "../Error/ReferenceError";
 import { findDuplicates } from "../Util";
 
 export class Reference {
+    public readonly types: Set<string>;
+
     constructor(
         public readonly name: string,
-        public readonly types: string[],
+        types: Set<string> | string[],
         public readonly definition: string,
         public readonly id: ReferenceId = generateId()
     ) {
+        this.types = Array.isArray(types) ? new Set(types) : types;
+
         const validNameRegex = new RegExp('^[a-zA-Z][a-zA-Z0-9_]*$');
 
-        if(!validNameRegex.test(name)) throw InvalidReferenceError.invalidSymbols(name);
+        if(!validNameRegex.test(name)) throw ReferenceError.invalidSymbols(name);
 
-        if(types.length === 0) throw InvalidReferenceError.noTypes();
-        const invalidType = types.find((singleType) => !(validNameRegex.test(singleType)));
+        if(this.types.size === 0) throw ReferenceError.noTypes();
+        const invalidType = Array.from(types).find((singleType) => !(validNameRegex.test(singleType)));
 
-        if(invalidType !== undefined) throw InvalidReferenceError.invalidSymbols(invalidType);
+        if(invalidType !== undefined) throw ReferenceError.invalidSymbols(invalidType);
     }
 
     public toRenderString = (): string => {
@@ -32,7 +36,7 @@ export class Reference {
 
         //There shall be no References that have the same name. These would cause errors when evaluating Functions.
         const duplicateNamedReferences = findDuplicates(references.map((reference) => reference.name));
-        if(duplicateNamedReferences.length > 0) throw InvalidReferenceError.duplicateNamedReference(text, duplicateNamedReferences); 
+        if(duplicateNamedReferences.length > 0) throw ReferenceError.duplicateNamedReference(text, duplicateNamedReferences); 
 
         return new Map(references.map((reference) => [reference.id, reference]));
     };
@@ -42,13 +46,13 @@ export class Reference {
         const nameTypeSplit = definition.split('@');
         
         //Default case
-        if(nameTypeSplit.length === 1) return new Reference(definition, [definition], definition);
+        if(nameTypeSplit.length === 1) return new Reference(definition, new Set([definition]), definition);
 
         //This is nonsense, because the second '@' has no meaning!
-        if(nameTypeSplit.length > 2) throw InvalidReferenceError.wrongFormat(definition);
+        if(nameTypeSplit.length > 2) throw ReferenceError.wrongFormat(definition);
 
         //A custom name was given: TYPE@NAME
-        return new Reference(nameTypeSplit[1], [nameTypeSplit[0]], definition);
+        return new Reference(nameTypeSplit[1], new Set([nameTypeSplit[0]]), definition);
     };
 }
 

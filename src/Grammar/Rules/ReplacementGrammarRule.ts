@@ -1,4 +1,4 @@
-import { InvalidGrammarRuleError } from "../../Error/InvalidGrammarRuleError";
+import { GrammarRuleError } from "../../Error/GrammarRuleError";
 import { MixedSentence } from "../../Sentence/MixedSentence";
 import { Sentence } from "../../Sentence/Sentence";
 import { SimpleSentence } from "../../Sentence/SimpleSentence";
@@ -9,13 +9,21 @@ export class ReplacementGrammarRule<S extends Sentence = SimpleSentence | MixedS
         super(input, output);
 
         if(output instanceof MixedSentence && input instanceof MixedSentence) {
-            Array.from(output.references.values()).filter((outputReference) => {
+            Array.from(output.references.values()).forEach((outputReference) => {
                 const matchingReference = Array.from(input.references.values()).find((inputReference) => {
                     return outputReference.name === inputReference.name
-                        && outputReference.types.every((type) => inputReference.types.includes(type))
+                        && Array.from(outputReference.types).every((type) => Array.from(inputReference.types).includes(type)); //TODO: FIXME: Use better set comparison operators here!
                 });
 
-                if(matchingReference === undefined) throw InvalidGrammarRuleError.nonMatchingReferences(input, output);
+                if(matchingReference === undefined) throw GrammarRuleError.nonMatchingReferences(input, output);
+                
+                //TODO: Super Hacky!!!
+                //We need to also update the References in the Output with the IDs of the Input, to make future matching easier
+                output.references.delete(outputReference.id);
+                output.references.set(matchingReference.id, matchingReference);
+
+                //Also replace the text
+                this.output.setDefinition(this.output.getDefinition().replace(outputReference.id, matchingReference.id));
             });
         }
     }

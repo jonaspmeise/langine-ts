@@ -1,10 +1,10 @@
-export class InvalidGrammarError extends Error {
+export class GrammarError extends Error {
     constructor(message: string) {
         super(message);
     }
 
-    public static wrongRuleFormat = (line: string): InvalidGrammarError => {
-        return new InvalidGrammarError(`
+    public static wrongRuleFormat = (line: string): GrammarError => {
+        return new GrammarError(`
         The line
 
         ${line}

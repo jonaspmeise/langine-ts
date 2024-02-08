@@ -1,10 +1,10 @@
-export class InvalidRulebookError extends Error {
+export class RulebookError extends Error {
     constructor(message: string) {
         super(message);
     }
 
-    public static noRulesFound = (text?: string): InvalidRulebookError => {
-        return new InvalidRulebookError(`
+    public static noRulesFound = (text?: string): RulebookError => {
+        return new RulebookError(`
         No Game Rules could be found!
 
         ${text === undefined ? '' : `"${text}"`}
